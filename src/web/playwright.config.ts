@@ -18,7 +18,10 @@ export default defineConfig({
       reuseExistingServer: false,
     },
     {
-      command: 'npm run build && npm run preview -- --port 4173 --strictPort',
+      command:
+        process.env.PLAYWRIGHT_SKIP_BUILD === '1'
+          ? 'npm run preview -- --port 4173 --strictPort'
+          : 'npm run build && npm run preview -- --port 4173 --strictPort',
       url: 'http://127.0.0.1:4173',
       reuseExistingServer: false,
     },

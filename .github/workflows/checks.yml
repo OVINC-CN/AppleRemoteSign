@@ -1,13 +1,16 @@
 name: Checks
 on:
-  push:
   pull_request:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
+  backend:
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -25,8 +28,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: jdx/mise-action@v2
-      - name: Install dependencies
-        run: mise run setup
+      - name: Cache Python dependency downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-${{ runner.arch }}-pip-${{ hashFiles('mise.toml', 'pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-pip-
+      - name: Install backend dependencies
+        run: mise run setup-backend
       - name: Explicitly provision disposable test schema and DML-only account
         env:
           MYSQL_PWD: test-root-only
@@ -36,11 +46,38 @@ jobs:
           CREATE USER 'signer_test'@'%' IDENTIFIED BY 'test-dml-only';
           GRANT SELECT, INSERT, UPDATE, DELETE ON apple_remote_sign_test.* TO 'signer_test'@'%';
           SQL
-      - run: mise run check
+      - name: Check backend
+        run: mise run check-backend
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+      - name: Cache Python dependency downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-${{ runner.arch }}-pip-${{ hashFiles('mise.toml', 'pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-pip-
+      - name: Cache npm dependency downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('src/web/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+      - name: Install frontend and browser backend dependencies
+        run: mise run setup
+      - name: Check frontend
+        run: mise run check-frontend
       - name: Install browser test runtime
         working-directory: src/web
         run: npx playwright install --with-deps chromium
       - name: Test static frontend against the disposable backend
+        env:
+          PLAYWRIGHT_SKIP_BUILD: "1"
         run: mise run browser-test
       - name: Upload static frontend
         uses: actions/upload-artifact@v4
@@ -53,3 +90,17 @@ jobs:
         with:
           name: browser-test-results
           path: src/web/test-results
+
+  # Preserve the existing status check for branch protection.
+  test:
+    if: ${{ always() }}
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require backend and frontend checks to pass
+        env:
+          BACKEND_RESULT: ${{ needs.backend.result }}
+          FRONTEND_RESULT: ${{ needs.frontend.result }}
+        run: |
+          test "$BACKEND_RESULT" = success
+          test "$FRONTEND_RESULT" = success
