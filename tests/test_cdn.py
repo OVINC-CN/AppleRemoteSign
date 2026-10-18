@@ -10,18 +10,19 @@ from apple_remote_sign.integrations import cdn
 from apple_remote_sign.integrations.cdn import CdnSigner
 
 
-def test_official_type_a_example(settings, monkeypatch):
+@pytest.mark.parametrize("parameter", ["token", "eo-sign"])
+def test_official_type_a_example(settings, monkeypatch, parameter):
     values = settings.model_dump()
     values.update(
         cdn_base_url="https://www.example.com/",
         cdn_sign_key="DvYmqE81E1F9R791H6lmht",
-        cdn_sign_param="token",
+        cdn_sign_param=parameter,
     )
     monkeypatch.setattr(cdn.time, "time", lambda: 1721028437)
     monkeypatch.setattr(cdn.secrets, "token_hex", lambda _size: "Kv4cPTAAP5YTi")
     signer = CdnSigner(Settings(_env_file=None, **values))
     assert signer.sign("foo.jpg") == (
-        "https://www.example.com/foo.jpg?token="
+        f"https://www.example.com/foo.jpg?{parameter}="
         "1721028437-Kv4cPTAAP5YTi-0-0fbdca749d7ab784750685347e42075c"
     )
 
@@ -57,7 +58,7 @@ def test_urls_are_fresh_even_within_the_same_second(settings, monkeypatch):
         {"cdn_base_url": "http://cdn.example.com"},
         {"cdn_base_url": "//cdn.example.com"},
         {"cdn_sign_key": ""},
-        {"cdn_sign_param": "bad-key"},
+        {"cdn_sign_param": "bad&key"},
         {"cdn_sign_param": ""},
         {"s3_bucket": ""},
         {"s3_prefix": "app/../dist"},

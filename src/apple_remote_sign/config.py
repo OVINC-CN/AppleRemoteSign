@@ -62,7 +62,7 @@ class Settings(BaseSettings):
     aws_session_token: SecretStr | None = Field(default=None, min_length=1)
     cdn_base_url: str
     cdn_sign_key: SecretStr = Field(min_length=1)
-    cdn_sign_param: str = Field(default="eo_sign", pattern=r"^[A-Za-z0-9_]{1,100}$")
+    cdn_sign_param: str = Field(default="eo_sign", pattern=r"^[A-Za-z0-9_-]{1,100}$")
     wecom_webhook_url: SecretStr | None = None
     wecom_timeout_seconds: float = Field(default=5, gt=0, allow_inf_nan=False)
     otel_service_name: str = "apple-remote-sign"
