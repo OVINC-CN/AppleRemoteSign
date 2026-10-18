@@ -164,7 +164,7 @@ OIDC 用户名采用精确匹配；普通用户需要同时获得登录白名单
 - **日志**：标准输出采用 JSON，使用响应头 `X-Trace-ID` 与日志中的 `trace_id` 关联请求；通过 `docker compose logs --no-log-prefix --no-color signer` 查看原始日志。
 - **追踪与通知**：配置 OTLP/gRPC 接收地址后上报追踪；配置企业微信群机器人 Webhook 后发送提交、成功和失败通知。
 - **持久化**：保留 MySQL、`data/` 和 S3 制品的备份；多副本共用同一数据库、Redis 逻辑 DB 和 ReadWriteMany 数据卷。
-- **镜像发布**：Git tag（`latest` 除外）触发构建并推送 `ghcr.io/ovinc-cn/appleremotesign:<Git tag>`，CI 镜像平台为 `linux/amd64`，镜像标签保留原始 Git tag。
+- **镜像发布**：分支 push 和 PR 触发构建验证，不推送镜像；Git tag（`latest` 除外）触发构建并推送 `ghcr.io/ovinc-cn/appleremotesign:<Git tag>`，CI 镜像平台为 `linux/amd64`，镜像标签保留原始 Git tag。
 
 ## 开发
 

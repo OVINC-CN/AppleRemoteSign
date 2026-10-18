@@ -2,9 +2,12 @@ name: Docker Build
 
 on:
   push:
+    branches:
+      - "**"
     tags:
       - "**"
       - "!latest"
+  pull_request:
 
 permissions:
   contents: read
@@ -18,17 +21,18 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
       - name: Log in to GHCR
+        if: github.event_name == 'push' && github.ref_type == 'tag'
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push amd64 Docker image
+      - name: Build amd64 Docker image
         uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/amd64
-          push: true
-          tags: ghcr.io/ovinc-cn/appleremotesign:${{ github.ref_name }}
+          push: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
+          tags: ${{ github.ref_type == 'tag' && format('ghcr.io/ovinc-cn/appleremotesign:{0}', github.ref_name) || '' }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
