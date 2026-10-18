@@ -1,0 +1,37 @@
+{
+  "archiveFilename": "DEEIX-Chat-0.4.4-beta.1-macos-arm64.zip",
+  "issues": null,
+  "jobId": "78cd3eb7-c11b-49a7-b8b1-14fa2139cda2",
+  "logFormatVersion": 1,
+  "sha256": "af4584189fe71f8ae15aed9db3a64899c15b104a1115e4c95a335ac73b83df48",
+  "status": "Accepted",
+  "statusCode": 0,
+  "statusSummary": "Ready for distribution",
+  "ticketContents": [
+    {
+      "arch": "arm64",
+      "cdhash": "07746a6c09dab9c9f904485af32bf6e8ffa181b4",
+      "digestAlgorithm": "SHA-256",
+      "path": "DEEIX-Chat-0.4.4-beta.1-macos-arm64.zip/DEEIX-Chat-0.4.4-beta.1-macos-arm64.app/Contents/MacOS/deeix-chat-server"
+    },
+    {
+      "arch": "arm64",
+      "cdhash": "91099a3fc0faae88e9dde70ac1b62c03e298e972",
+      "digestAlgorithm": "SHA-256",
+      "path": "DEEIX-Chat-0.4.4-beta.1-macos-arm64.zip/DEEIX-Chat-0.4.4-beta.1-macos-arm64.app"
+    },
+    {
+      "arch": "arm64",
+      "cdhash": "91099a3fc0faae88e9dde70ac1b62c03e298e972",
+      "digestAlgorithm": "SHA-256",
+      "path": "DEEIX-Chat-0.4.4-beta.1-macos-arm64.zip/DEEIX-Chat-0.4.4-beta.1-macos-arm64.app/Contents/MacOS/deeix-chat-desktop"
+    },
+    {
+      "arch": "arm64",
+      "cdhash": "07746a6c09dab9c9f904485af32bf6e8ffa181b4",
+      "digestAlgorithm": "SHA-256",
+      "path": "DEEIX-Chat-0.4.4-beta.1-macos-arm64.zip/DEEIX-Chat-0.4.4-beta.1-macos-arm64.app/Contents/MacOS/deeix-chat-server"
+    }
+  ],
+  "uploadDate": "2026-10-15T09:46:43.002Z"
+}

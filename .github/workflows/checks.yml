@@ -1,0 +1,55 @@
+name: Checks
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: test-root-only
+          MYSQL_DATABASE: apple_remote_sign_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -ptest-root-only"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    env:
+      TEST_MYSQL_URL: mysql+pymysql://signer_test:test-dml-only@127.0.0.1:3306/apple_remote_sign_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+      - name: Install dependencies
+        run: mise run setup
+      - name: Explicitly provision disposable test schema and DML-only account
+        env:
+          MYSQL_PWD: test-root-only
+        run: |
+          mysql -h 127.0.0.1 -uroot apple_remote_sign_test < support-files/sql/0001_init.sql
+          mysql -h 127.0.0.1 -uroot <<'SQL'
+          CREATE USER 'signer_test'@'%' IDENTIFIED BY 'test-dml-only';
+          GRANT SELECT, INSERT, UPDATE, DELETE ON apple_remote_sign_test.* TO 'signer_test'@'%';
+          SQL
+      - run: mise run check
+      - name: Install browser test runtime
+        working-directory: src/web
+        run: npx playwright install --with-deps chromium
+      - name: Test static frontend against the disposable backend
+        run: mise run browser-test
+      - name: Upload static frontend
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: src/web/dist
+      - name: Upload browser test diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-test-results
+          path: src/web/test-results

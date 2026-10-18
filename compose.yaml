@@ -1,0 +1,17 @@
+services:
+  signer:
+    build: .
+    image: apple-remote-sign:local
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - "./data:/data"
+      - "./secrets:/run/secrets:ro"
+    stop_grace_period: 65m
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL

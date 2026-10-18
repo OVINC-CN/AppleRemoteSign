@@ -1,0 +1,40 @@
+[tools]
+python = "3.14"
+node = "24"
+shellcheck = "0.11.0"
+shfmt = "3.12.0"
+
+[tasks.setup]
+run = ["python -m venv .venv", ".venv/bin/python -m pip install -e '.[dev]'", "npm --prefix src/web ci"]
+
+[tasks.lint]
+run = [".venv/bin/ruff check .", "shellcheck support-files/scripts/*.sh", "npm --prefix src/web run lint", "npm --prefix src/web run typecheck"]
+
+[tasks.format]
+run = [".venv/bin/ruff format .", "shfmt -w -i 2 support-files/scripts/*.sh", "npm --prefix src/web run format"]
+
+[tasks.format-check]
+run = [".venv/bin/ruff format --check .", "shfmt -d -i 2 support-files/scripts/*.sh", "npm --prefix src/web run format:check"]
+
+[tasks.typecheck]
+run = [".venv/bin/mypy", "npm --prefix src/web run typecheck"]
+
+[tasks.test]
+run = [".venv/bin/pytest", "npm --prefix src/web test"]
+
+[tasks.browser-test]
+run = "npm --prefix src/web run test:e2e"
+
+[tasks.check]
+run = [
+  ".venv/bin/ruff check .",
+  ".venv/bin/ruff format --check .",
+  ".venv/bin/mypy",
+  ".venv/bin/python support-files/check_module_size.py",
+  "shellcheck support-files/scripts/*.sh",
+  "shfmt -d -i 2 support-files/scripts/*.sh",
+  "npm --prefix src/web run lint",
+  ".venv/bin/pytest",
+  "npm --prefix src/web test",
+  "npm --prefix src/web run build",
+]
