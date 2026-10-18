@@ -5,7 +5,13 @@ shellcheck = "0.11.0"
 shfmt = "3.12.0"
 
 [tasks.setup]
-run = ["python -m venv .venv", ".venv/bin/python -m pip install -e '.[dev]'", "npm --prefix src/web ci"]
+depends = ["setup-backend", "setup-frontend"]
+
+[tasks.setup-backend]
+run = ["python -m venv .venv", ".venv/bin/python -m pip install -e '.[dev]'"]
+
+[tasks.setup-frontend]
+run = "npm --prefix src/web ci"
 
 [tasks.lint]
 run = [".venv/bin/ruff check .", "shellcheck support-files/scripts/*.sh", "npm --prefix src/web run lint", "npm --prefix src/web run typecheck"]
@@ -26,6 +32,9 @@ run = [".venv/bin/pytest", "npm --prefix src/web test"]
 run = "npm --prefix src/web run test:e2e"
 
 [tasks.check]
+depends = ["check-backend", "check-frontend"]
+
+[tasks.check-backend]
 run = [
   ".venv/bin/ruff check .",
   ".venv/bin/ruff format --check .",
@@ -33,8 +42,12 @@ run = [
   ".venv/bin/python support-files/check_module_size.py",
   "shellcheck support-files/scripts/*.sh",
   "shfmt -d -i 2 support-files/scripts/*.sh",
-  "npm --prefix src/web run lint",
   ".venv/bin/pytest",
+]
+
+[tasks.check-frontend]
+run = [
+  "npm --prefix src/web run lint",
   "npm --prefix src/web test",
   "npm --prefix src/web run build",
 ]
