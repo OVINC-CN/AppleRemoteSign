@@ -178,6 +178,8 @@ mise run check
 
 `mise run check` 执行 Ruff、mypy、模块大小检查、ShellCheck、shfmt、Biome、pytest、Vitest，以及 TypeScript 检查和前端静态构建。格式调整使用 `mise run format`，修改后重新执行完整检查。
 
+`setup` 和 `check` 均并发执行前后端任务，也可使用 `setup-backend`、`setup-frontend`、`check-backend` 和 `check-frontend` 单独执行。CI 中前后端检查在独立 job 中并发运行，MySQL 集成测试由后端 job 执行，浏览器测试由前端 job 复用已构建的静态文件。
+
 单元测试使用临时数据库和模拟外部依赖。MySQL 集成测试通过 `TEST_MYSQL_URL` 接入手动初始化的测试库，使用仅有 DML 权限的账号，数据库名以 `_test` 结尾；Redis 集成测试通过 `TEST_REDIS_URL` 接入独立测试 DB。未配置对应地址时，这些集成测试会明确跳过。CI 使用同一份 `0001_init.sql` 初始化 MySQL，并验证表、字段、主键和索引与模型一致。
 
 ```text
