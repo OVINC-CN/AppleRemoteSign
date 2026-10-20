@@ -54,8 +54,6 @@ window.__APP_CONFIG__ = {
 
 字段名保留为约定的 `API_BASE_UR`。填写后端根 URL，不包含 `/api/v1`、查询参数或凭据；空字符串使用前端当前 Origin。此文件是公开资源，不能放 Key 或 OIDC client secret。修改后刷新页面即可生效。
 
-`API_BASE_UR` 与 `OIDC_REDIRECT_URI` 必须使用同一个对外 API Origin（协议、域名和端口）。例如回调为 `https://api.sign.example.com/api/v1/auth/callback` 时，前端应请求 `https://api.sign.example.com`，不能混用 `http://localhost:8000`。后端登录入口会先跳转到配置的回调 Origin，再创建登录事务；其他浏览器接口仍依赖正确的前端 API 配置。反向代理须保留原始 Host，并正确传递协议；Uvicorn 只应信任实际代理来源的转发头。
-
 回调报 `login_cookie_missing` 表示浏览器没有送回该次登录的 Cookie；检查以上 Origin、Cookie Domain、Secure 和浏览器限制。`login_cookie_mismatch` 表示浏览器绑定不匹配，`login_expired` 表示事务过期或已消费。错误会显示在登录页，服务端记录错误类别而不记录 Cookie、state 或授权码。修改配置后应从登录页重新发起登录，不能重用旧 callback URL。
 
 Nginx 静态站点示例（域名、证书和 root 按实际服务配置）：

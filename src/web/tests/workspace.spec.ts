@@ -70,7 +70,7 @@ test('parallel login tabs retain their own browser binding', async ({
   }
 });
 
-test('login starts on the callback host when entered through a local alias', async ({
+test('login on a local alias reports a missing cookie and allows retry on the API host', async ({
   page,
 }) => {
   await page.route('**/config.js', (route) =>
@@ -83,6 +83,21 @@ test('login starts on the callback host when entered through a local alias', asy
   await expect(page).toHaveURL(
     /^http:\/\/127\.0\.0\.1:18765\/test\/authorize\?/,
   );
+  await page
+    .getByRole('button', {
+      name: 'alice',
+      exact: true,
+    })
+    .click();
+  await expect(page).toHaveURL(/\/login\?error=login_cookie_missing$/);
+  await expect(page.getByRole('alert')).toContainText(
+    '浏览器未返回登录校验 Cookie',
+  );
+  await page
+    .getByRole('link', {
+      name: '使用 OIDC 登录',
+    })
+    .click();
   await page
     .getByRole('button', {
       name: 'alice',

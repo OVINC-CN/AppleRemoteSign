@@ -6,7 +6,6 @@ from typing import Any, cast
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from starlette.concurrency import run_in_threadpool
-from starlette.datastructures import URL
 from starlette.responses import Response
 
 from apple_remote_sign.api.dependencies import principal
@@ -98,11 +97,6 @@ def clear_cookie(response: Response, settings: Settings, *, state: str | None = 
 @router.get("/login")
 async def login(request: Request) -> Response:
     settings: Settings = request.app.state.settings
-    callback_url = URL(settings.oidc_redirect_uri)
-    if (request.url.scheme, request.url.netloc) != (callback_url.scheme, callback_url.netloc):
-        # Set the binding cookie on the callback origin, even when entered via a local alias.
-        login_url = callback_url.replace(path=callback_url.path.rsplit("/", 1)[0] + "/login")
-        return RedirectResponse(str(login_url), status_code=303)
     client = request.app.state.oidc_client
     auth: AuthRepository = request.app.state.auth_repository
     state, browser = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
