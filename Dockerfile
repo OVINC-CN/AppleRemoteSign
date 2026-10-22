@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM python:3.14-slim AS rcodesign
+FROM python:3.14.9-slim AS rcodesign
 ARG TARGETARCH
 ARG RCODESIGN_VERSION=0.29.0
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
@@ -19,7 +19,7 @@ RUN set -eu; \
     install -m 0755 /tmp/tool/rcodesign /usr/local/bin/rcodesign; \
     rcodesign --version
 
-FROM python:3.14-slim AS runtime
+FROM python:3.14.9-slim AS runtime
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PIP_NO_CACHE_DIR=1
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/* \

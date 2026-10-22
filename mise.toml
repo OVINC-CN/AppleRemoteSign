@@ -1,6 +1,6 @@
 [tools]
-python = "3.14"
-node = "24"
+python = "3.14.9"
+node = "24.22.1"
 shellcheck = "0.11.0"
 shfmt = "3.12.0"
 
