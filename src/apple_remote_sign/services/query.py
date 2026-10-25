@@ -98,27 +98,35 @@ class QueryService:
         ctx.repository.save(job)
         stage = "staple"
         try:
-            artifact = self._cached_artifact(job)
-            if artifact is None:
-                artifact = self._local_artifact(job)
-                job.artifact_path = artifact.path
-                job.artifact_sha256 = artifact.sha256
-                ctx.repository.save(job)
+            artifact = self._artifact_for_upload(job)
             stage = "upload"
             key = job.artifact_s3_key or ctx.artifacts.key_for(
                 job_directory(job.application_id, job.id, job.created_at), job.filename
             )
-            with operation("s3.upload", kind=SpanKind.CLIENT, job_id=job.id):
-                ensure_ownership()
-                ctx.artifacts.upload(
-                    ctx.storage.require_file(artifact.path), key, job.filename, artifact.sha256
-                )
-            ensure_ownership()
+            self._upload_artifact(job, artifact, key)
             job.artifact_s3_key = key
             job.status = JobStatus.COMPLETED.value
             job.error_message = ""
         except (OperationError, OSError) as exc:
             ctx.fail(job, stage, exc)
+
+    def _artifact_for_upload(self, job: Job) -> StoredFile:
+        artifact = self._cached_artifact(job)
+        if artifact is None:
+            artifact = self._local_artifact(job)
+            job.artifact_path = artifact.path
+            job.artifact_sha256 = artifact.sha256
+            self.context.repository.save(job)
+        return artifact
+
+    def _upload_artifact(self, job: Job, artifact: StoredFile, key: str) -> None:
+        ctx = self.context
+        with operation("s3.upload", kind=SpanKind.CLIENT, job_id=job.id):
+            ensure_ownership()
+            ctx.artifacts.upload(
+                ctx.storage.require_file(artifact.path), key, job.filename, artifact.sha256
+            )
+        ensure_ownership()
 
     def _cached_artifact(self, job: Job) -> StoredFile | None:
         if not job.artifact_path or not job.artifact_sha256:
@@ -194,11 +202,13 @@ class QueryService:
                 with operation("s3.head", kind=SpanKind.CLIENT, job_id=job.id):
                     ensure_ownership()
                     exists = ctx.artifacts.exists(job.artifact_s3_key)
-            except OperationError as exc:
-                raise ApiError(502, ctx.redactor.clean(str(exc)), data) from None
-            ensure_ownership()
-            if not exists:
-                raise ApiError(410, "File expired or no longer available.", data)
+                ensure_ownership()
+                if not exists:
+                    artifact = self._artifact_for_upload(job)
+                    self._upload_artifact(job, artifact, job.artifact_s3_key)
+            except (OperationError, OSError) as exc:
+                message = str(exc) if isinstance(exc, OperationError) else str(exc.strerror)
+                raise ApiError(502, ctx.redactor.clean(message), data) from None
             logger.info(
                 "artifact.download\njob_id: %s\napplication_id: %s",
                 job.id,

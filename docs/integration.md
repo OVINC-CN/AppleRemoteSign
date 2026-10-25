@@ -184,7 +184,7 @@ S3 上传失败同样可显式查询重试。服务校验已保存本地制品�
 
 **`GET /openapi/v1/jobs/{id}/artifact`**
 
-仅当任务为 `completed` 且 S3 `HeadObject` 确认已保存的对象 key 仍存在时返回 HTTP **302**，`Location` 为本次下载新生成的鉴权 CDN URL，并返回 `Cache-Control: no-store`。API 不返回 ZIP 内容，也不触发 Apple 查询或检查本地制品。客户端应跟随 `Location` 下载；最终文件响应、Range 支持由 CDN 负责，对象元数据保留原始 ZIP 下载文件名。
+任务为 `completed` 时，服务端通过 S3 `HeadObject` 检查已保存的对象 key；对象存在或自动补传成功后返回 HTTP **302**，`Location` 为本次下载新生成的鉴权 CDN URL，并返回 `Cache-Control: no-store`。对象缺失时，服务校验本地制品的 SHA-256 并补传到原对象 key；本地制品缺失或损坏时，从已提交的签名 ZIP 副本重新 staple、打包并补传。API 不返回 ZIP 内容，也不触发 Apple 状态查询或重新签名、提交公证。客户端应跟随 `Location` 下载；最终文件响应、Range 支持由 CDN 负责，对象元数据保留原始 ZIP 下载文件名。
 
 CDN 默认参数为 `eo_sign=timestamp-rand-0-md5hash`。签名按 EdgeOne 方式 A 计算：`MD5(Path-timestamp-rand-0-密钥)`；Path 为最终 URL 中以 `/` 开头的百分号编码路径。时间戳为签发时的 Unix 秒，有效期由 CDN 配置。链接不入库，每次请求都会生成新的随机串。
 
@@ -203,7 +203,7 @@ curl --fail --silent --show-error --location --max-redirs 5 \
   mv MyApp-notarized.dmg.zip.part MyApp-notarized.dmg.zip
 ```
 
-尚未完成时返回 HTTP 409 和 JSON 错误；失败任务返回 HTTP 500。S3 对象不存在时返回 HTTP 410，`error_message` 为 `File expired or no longer available.`；S3 权限、连接或其他查询异常返回 HTTP 502。下载检查不改变任务完成状态。请勿把错误 JSON 保存成正式制品。配套脚本已处理临时文件、状态码校验、下载失败清理和原子发布。
+尚未完成时返回 HTTP 409 和 JSON 错误；失败任务返回 HTTP 500。S3 对象不存在时自动补传，不再返回 HTTP 410；S3 权限、连接、查询异常或补传所需的本地制品恢复、上传失败时返回 HTTP 502。下载检查和补传失败均保留任务完成状态，可以修复原因后重试下载。请勿把错误 JSON 保存成正式制品。配套脚本已处理临时文件、状态码校验、下载失败清理和原子发布。
 
 CDN 返回 403（例如链接过期或鉴权不匹配）、404 或网络错误时下载失败；CDN 错误不使用本服务的 JSON envelope。可以重新请求 API 获取新链接，不要缓存 302 或将 API Bearer 转发到 CDN。
 
@@ -276,10 +276,9 @@ RESULT_HELPER_URL='https://sign.example.com/scripts/archive-helper.py' \
 | `401` | Bearer Token 缺失或错误 | 检查 Token |
 | `404` | 服务任务不存在 | 检查是否误用了 Apple submission ID |
 | `409` | 产物尚未就绪 | 先调用查询接口 |
-| `410` | 制品已过期或已从 S3 删除 | 文件已不可下载，重新获取制品 |
 | `422` | 字段缺失、UUID 格式错误、非 ZIP 上传、ZIP 文件名缺少版本号、空文件、ZIP 结构或大小不合法 | 修正请求；App 或 DMG 先按上文打包 ZIP，文件名包含三段数字版本号 |
 | `500` | 任务失败或服务内部错误 | 读取 `error_message`，保留 `data.id`；必要时查看 DB |
-| `502` | Apple 或 S3 查询失败或返回异常数据 | 停止当前自动流程，稍后凭原任务 ID 重试 |
+| `502` | Apple 或 S3 操作失败、制品恢复失败或返回异常数据 | 停止当前自动流程，稍后凭原任务 ID 重试 |
 
 OpenAPI schema 获取方式：
 

@@ -48,7 +48,7 @@ select = ["E", "F", "I", "UP", "B", "SIM", "C90", "RUF"]
 max-complexity = 10
 
 [tool.mypy]
-python_version = "3.14.9"
+python_version = "3.14"
 strict = true
 files = ["src/apple_remote_sign"]
 

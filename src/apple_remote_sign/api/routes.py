@@ -20,7 +20,7 @@ router = APIRouter(
             404: "Job not found",
             422: "Invalid request",
             500: "Job or service failed; data contains task information when available",
-            502: "Apple or S3 query failed; persisted status is preserved",
+            502: "Apple or S3 operation failed; persisted status is preserved",
             503: "Redis coordination unavailable or task lease lost; query an existing task first",
         }.items()
     },
@@ -67,7 +67,6 @@ def query_job(request: Request, job_id: UUID) -> Envelope:
             "headers": {"Location": {"schema": {"type": "string", "format": "uri"}}},
         },
         409: {"model": Envelope, "description": "Artifact not ready"},
-        410: {"model": Envelope, "description": "File expired or no longer available in S3"},
     },
 )
 def download_artifact(request: Request, job_id: UUID) -> ArtifactResponse:
