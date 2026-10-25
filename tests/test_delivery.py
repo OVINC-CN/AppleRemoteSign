@@ -4,6 +4,7 @@ from urllib.parse import parse_qs, urlsplit
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
+from apple_remote_sign.domain import OperationError
 from apple_remote_sign.services.query import QueryService
 from tests.archive_helpers import dmg_zip, read_dmg
 from tests.test_web_api import login_as
@@ -147,8 +148,9 @@ def test_download_checks_s3_each_time_without_local_files_or_apple(
 
 
 @pytest.mark.parametrize("download_path", DOWNLOAD_PATHS)
-def test_removed_artifact_returns_expired_without_signing_a_link(
-    client, context, settings, apple, artifacts, download_path, monkeypatch
+@pytest.mark.parametrize("cache_state", ["valid", "missing", "corrupt"])
+def test_removed_artifact_is_restored_before_signing_a_link(
+    client, context, settings, apple, tool, artifacts, download_path, cache_state, monkeypatch
 ):
     job_id = accepted_job(client, apple)
     assert client.get(f"/openapi/v1/jobs/{job_id}").status_code == 200
@@ -158,20 +160,90 @@ def test_removed_artifact_returns_expired_without_signing_a_link(
     path = download_path.format(job_id=job_id)
     assert download_url(client.get(path))
     content = artifacts.objects.pop(job.artifact_s3_key)
-    assert context.storage.require_file(job.artifact_path).is_file()
+    local = context.storage.require_file(job.artifact_path)
+    submitted = context.storage.require_file(job.submitted_path).read_bytes()
+    if cache_state == "missing":
+        local.unlink()
+    elif cache_state == "corrupt":
+        local.write_bytes(b"corrupt artifact")
+    artifacts.prefix = "changed-prefix/"
+    before = len(apple.calls)
+    apple.error = "Apple must not be queried"
+    sign = context.cdn.sign
+
+    def sign_existing(key):
+        assert key in artifacts.objects
+        assert (
+            context.repository.get(job_id).artifact_sha256
+            == context.storage.inspect(job.artifact_path).sha256
+        )
+        return sign(key)
+
+    monkeypatch.setattr(context.cdn, "sign", sign_existing)
+    response = client.get(path)
+    assert urlsplit(download_url(response)).path == "/" + job.artifact_s3_key
+    assert response.headers["cache-control"] == "no-store"
+    assert read_dmg(artifacts.objects[job.artifact_s3_key]) == b"original|signed|stapled"
+    if cache_state == "valid":
+        assert artifacts.objects[job.artifact_s3_key] == content
+    stored = context.repository.get(job_id)
+    assert stored.status == "completed"
+    assert stored.artifact_s3_key == job.artifact_s3_key
+    assert stored.submission_id == job.submission_id
+    assert context.storage.require_file(job.submitted_path).read_bytes() == submitted
+    assert len(apple.calls) == before
+    operations = [name for name, _ in tool.calls]
+    assert operations.count("sign") == operations.count("submit") == 1
+    assert operations.count("staple") == (1 if cache_state == "valid" else 2)
+    assert download_url(client.get(path))
+    assert artifacts.calls == [job.artifact_s3_key] * 2
+    assert artifacts.lookups == [job.artifact_s3_key] * 3
+
+
+@pytest.mark.parametrize("download_path", DOWNLOAD_PATHS)
+@pytest.mark.parametrize("failure", ["upload", "missing-source", "staple"])
+def test_artifact_restore_failure_can_retry_download_without_changing_completed_status(
+    client, context, settings, apple, tool, artifacts, download_path, failure, monkeypatch
+):
+    job_id = accepted_job(client, apple)
+    assert client.get(f"/openapi/v1/jobs/{job_id}").status_code == 200
+    job = context.repository.get(job_id)
+    if download_path.startswith("/api/"):
+        login_as(client, context, settings, "admin")
+    path = download_path.format(job_id=job_id)
+    artifacts.objects.pop(job.artifact_s3_key)
+    submitted_path = context.storage.require_file(job.submitted_path)
+    submitted = submitted_path.read_bytes()
+    if failure != "upload":
+        context.storage.require_file(job.artifact_path).unlink()
+    if failure == "missing-source":
+        submitted_path.unlink()
+    tool.fail_staple = failure == "staple"
+
+    def fail_upload():
+        raise OperationError("S3 upload unavailable")
+
+    artifacts.before_upload = fail_upload if failure == "upload" else None
+    before = len(apple.calls)
+    apple.error = "Apple must not be queried"
     with monkeypatch.context() as patch:
         patch.setattr(context.cdn, "sign", lambda *_: pytest.fail("Missing artifact signed"))
         response = client.get(path)
-    assert response.status_code == 410
-    assert response.json() == {
-        "data": {"id": job_id, "status": "completed", "submission_id": job.submission_id},
-        "error_message": "File expired or no longer available.",
-    }
+    assert response.status_code == 502
+    assert response.json()["error_message"]
+    assert response.json()["data"]["status"] == "completed"
     assert "location" not in response.headers
     assert context.repository.get(job_id).status == "completed"
-    artifacts.objects[job.artifact_s3_key] = content
+    assert job.artifact_s3_key not in artifacts.objects
+    artifacts.before_upload = None
+    tool.fail_staple = False
+    if failure == "missing-source":
+        submitted_path.write_bytes(submitted)
     assert download_url(client.get(path))
-    assert artifacts.lookups == [job.artifact_s3_key] * 3
+    assert read_dmg(artifacts.objects[job.artifact_s3_key]) == b"original|signed|stapled"
+    assert len(apple.calls) == before
+    operations = [name for name, _ in tool.calls]
+    assert operations.count("sign") == operations.count("submit") == 1
 
 
 @pytest.mark.parametrize("download_path", DOWNLOAD_PATHS)
