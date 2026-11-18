@@ -28,6 +28,7 @@ import (
 	"github.com/OVINC-CN/AppleSign/src/api/internal/apps/jobs/jobsTask"
 	"github.com/OVINC-CN/AppleSign/src/api/internal/config"
 	"github.com/OVINC-CN/AppleSign/src/api/internal/db"
+	"github.com/OVINC-CN/AppleSign/src/api/internal/logger"
 	"github.com/OVINC-CN/AppleSign/src/api/internal/storage"
 )
 
@@ -65,6 +66,59 @@ func fields(t *testing.T, r *httptest.ResponseRecorder) map[string]any {
 	var v map[string]any
 	must(t, json.Unmarshal(r.Body.Bytes(), &v))
 	return v
+}
+
+func TestRealIPUsesTrustedProxies(t *testing.T) {
+	engine := New()
+	for _, tc := range []struct{ remote, forwarded, want string }{
+		{"10.0.0.1:80", "", "10.0.0.1"},
+		{"10.15.255.255:80", "203.0.113.1, 198.51.100.1, 10.0.0.2", "198.51.100.1"},
+		{"10.16.0.1:80", "203.0.113.1", "10.16.0.1"},
+		{"127.0.0.1:80", "203.0.113.1", "127.0.0.1"},
+		{"169.254.1.1:80", "203.0.113.1", "169.254.1.1"},
+	} {
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
+		req.RemoteAddr = tc.remote
+		if tc.forwarded != "" {
+			req.Header.Set(echo.HeaderXForwardedFor, tc.forwarded)
+		}
+		if got := engine.NewContext(req, httptest.NewRecorder()).RealIP(); got != tc.want {
+			t.Errorf("remote %s, forwarded %q: got %s, want %s", tc.remote, tc.forwarded, got, tc.want)
+		}
+	}
+}
+
+func TestProbeRequestLogs(t *testing.T) {
+	engine := New()
+	var logs bytes.Buffer
+	previous := logger.Logger.Out
+	logger.Logger.SetOutput(&logs)
+	defer logger.Logger.SetOutput(previous)
+
+	for _, tc := range []struct {
+		method, path  string
+		code          int
+		wantAccessLog bool
+	}{
+		{"GET", "/health?verbose=1", 200, false},
+		{"GET", "/ready", 503, false},
+		{"POST", "/health", 405, true},
+		{"GET", "/ready/missing", 404, true},
+	} {
+		logs.Reset()
+		r := request(t, engine, tc.method, tc.path, "", nil, nil, "")
+		status(t, r, tc.code)
+		if r.Header().Get("X-Trace-ID") == "" {
+			t.Fatalf("%s %s: missing trace ID", tc.method, tc.path)
+		}
+		path, _, _ := strings.Cut(tc.path, "?")
+		if got := strings.Contains(logs.String(), `"msg":"`+tc.method+" "+path+" "); got != tc.wantAccessLog {
+			t.Fatalf("%s %s: want access log %t, got %s", tc.method, tc.path, tc.wantAccessLog, &logs)
+		}
+		if tc.code == http.StatusServiceUnavailable && !strings.Contains(logs.String(), "Span failed") {
+			t.Fatalf("%s %s: missing error diagnostic: %s", tc.method, tc.path, &logs)
+		}
+	}
 }
 
 func TestUploadErrors(t *testing.T) {

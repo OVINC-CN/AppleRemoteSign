@@ -24,6 +24,16 @@ func New() *echo.Echo {
 	e.Server.Addr = config.Config.App.Addr
 	e.Server.ReadHeaderTimeout = config.Config.HTTP.ReadHeaderTimeout
 	e.Server.IdleTimeout = config.Config.HTTP.IdleTimeout
+	// 仅显式配置的代理网段有权转发客户端 IP。
+	trustedProxies := []echo.TrustOption{
+		echo.TrustLoopback(false),
+		echo.TrustLinkLocal(false),
+		echo.TrustPrivateNet(false),
+	}
+	for _, network := range config.Config.HTTP.TrustedProxyNets {
+		trustedProxies = append(trustedProxies, echo.TrustIPRange(network))
+	}
+	e.IPExtractor = echo.ExtractIPFromXFFHeader(trustedProxies...)
 	e.Use(
 		traceRequests,
 		middleware.Recover(),

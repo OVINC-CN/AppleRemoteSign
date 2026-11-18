@@ -59,8 +59,13 @@ func traceRequests(next echo.HandlerFunc) echo.HandlerFunc {
 		if status >= 500 {
 			span.SetStatus(codes.Error, http.StatusText(status))
 		}
-		logger.Logger.WithContext(ctx).
-			Infof("%s %s %d %s ip=%s bytes=%d", req.Method, req.URL.EscapedPath(), status, time.Since(start), c.RealIP(), c.Response().Size)
+		if req.Method == http.MethodGet && (c.Path() == "/health" || c.Path() == "/ready") {
+			return nil
+		}
+		logger.Logger.WithContext(ctx).Infof(
+			"%s %s %d %s ip=%s bytes=%d",
+			req.Method, req.URL.EscapedPath(), status, time.Since(start), c.RealIP(), c.Response().Size,
+		)
 		return nil
 	}
 }

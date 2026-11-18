@@ -1,6 +1,9 @@
 package config
 
-import "time"
+import (
+	"net"
+	"time"
+)
 
 type traceConfig struct {
 	ResourceAttributes map[string]string `yaml:"resource_attributes"`
@@ -36,6 +39,8 @@ type appConfig struct {
 
 type config struct {
 	HTTP struct {
+		TrustedProxyCIDRs []string      `yaml:"trusted_proxy_cidrs"`
+		TrustedProxyNets  []*net.IPNet  `yaml:"-"`
 		ReadHeaderTimeout time.Duration `yaml:"read_header_timeout"`
 		IdleTimeout       time.Duration `yaml:"idle_timeout"`
 	} `yaml:"http"`

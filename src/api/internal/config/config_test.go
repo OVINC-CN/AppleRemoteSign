@@ -14,6 +14,7 @@ func TestYAMLContract(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, test := range []struct{ old, new string }{
+		{"10.0.0.0/12", "10.0.0.0/33"},
 		{"cookie_secure: true", "cookie_secure: false\n  cookie_same_site: none"},
 		{"login_ttl: \"10m\"", "login_ttl: 11m"},
 		{"max_upload_bytes: 2147483648", "max_upload_bytes: -1"},
