@@ -21,3 +21,7 @@ docs
 src/web
 .env
 .DS_Store
+
+/config.yaml
+src/api/config.local.yaml
+src/api/bin/

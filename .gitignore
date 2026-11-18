@@ -27,3 +27,7 @@ secrets/
 *.pem
 *.key
 *.log
+
+/config.yaml
+src/api/config.local.yaml
+src/api/bin/

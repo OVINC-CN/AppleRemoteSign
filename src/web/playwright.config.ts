@@ -13,7 +13,7 @@ export default defineConfig({
   webServer: [
     {
       command:
-        '../../.venv/bin/uvicorn tests.browser_server:app --app-dir ../.. --host 127.0.0.1 --port 18765',
+        'go -C ../api test -tags testfixture -count=1 -timeout=0 ./internal/httpd -run ^TestBrowserServer$ -args -browser-fixture',
       url: 'http://127.0.0.1:18765/health',
       reuseExistingServer: false,
     },

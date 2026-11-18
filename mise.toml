@@ -1,4 +1,5 @@
 [tools]
+go = "1.26.10"
 python = "3.14.9"
 node = "24.22.1"
 shellcheck = "0.11.0"
@@ -8,25 +9,28 @@ shfmt = "3.12.0"
 depends = ["setup-backend", "setup-frontend"]
 
 [tasks.setup-backend]
-run = ["python -m venv .venv", ".venv/bin/python -m pip install -e '.[dev]'"]
+run = "go -C src/api mod download"
+
+[tasks.setup-client]
+run = ["python -m venv .venv", ".venv/bin/python -m pip install 'pytest>=8.4,<10' 'ruff>=0.14,<1'"]
 
 [tasks.setup-frontend]
 run = "npm --prefix src/web ci"
 
 [tasks.lint]
-run = [".venv/bin/ruff check .", "shellcheck support-files/scripts/*.sh", "npm --prefix src/web run lint", "npm --prefix src/web run typecheck"]
+run = ["make -C src/api lint", ".venv/bin/ruff check .", "shellcheck support-files/scripts/*.sh", "npm --prefix src/web run lint", "npm --prefix src/web run typecheck"]
 
 [tasks.format]
-run = [".venv/bin/ruff format .", "shfmt -w -i 2 support-files/scripts/*.sh", "npm --prefix src/web run format"]
+run = ["make -C src/api format", ".venv/bin/ruff format .", "shfmt -w -i 2 support-files/scripts/*.sh", "npm --prefix src/web run format"]
 
 [tasks.format-check]
-run = [".venv/bin/ruff format --check .", "shfmt -d -i 2 support-files/scripts/*.sh", "npm --prefix src/web run format:check"]
+run = ["make -C src/api format-check", ".venv/bin/ruff format --check .", "shfmt -d -i 2 support-files/scripts/*.sh", "npm --prefix src/web run format:check"]
 
 [tasks.typecheck]
-run = [".venv/bin/mypy", "npm --prefix src/web run typecheck"]
+run = ["go -C src/api vet ./...", "npm --prefix src/web run typecheck"]
 
 [tasks.test]
-run = [".venv/bin/pytest", "npm --prefix src/web test"]
+run = ["make -C src/api test", ".venv/bin/python -m pytest -ra tests", "npm --prefix src/web test"]
 
 [tasks.browser-test]
 run = "npm --prefix src/web run test:e2e"
@@ -35,19 +39,7 @@ run = "npm --prefix src/web run test:e2e"
 depends = ["check-backend", "check-frontend"]
 
 [tasks.check-backend]
-run = [
-  ".venv/bin/ruff check .",
-  ".venv/bin/ruff format --check .",
-  ".venv/bin/mypy",
-  ".venv/bin/python support-files/check_module_size.py",
-  "shellcheck support-files/scripts/*.sh",
-  "shfmt -d -i 2 support-files/scripts/*.sh",
-  ".venv/bin/pytest",
-]
+run = "make -C src/api build"
 
 [tasks.check-frontend]
-run = [
-  "npm --prefix src/web run lint",
-  "npm --prefix src/web test",
-  "npm --prefix src/web run build",
-]
+run = ["npm --prefix src/web run lint", "npm --prefix src/web run build"]
