@@ -1,4 +1,7 @@
 http:
+  # 仅信任这些反向代理网段传入的 X-Forwarded-For；直连部署可设为 []。
+  trusted_proxy_cidrs:
+    - 10.0.0.0/12
   read_header_timeout: 10s
   idle_timeout: 60s
 app:

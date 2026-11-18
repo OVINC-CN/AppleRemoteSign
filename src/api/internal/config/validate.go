@@ -43,6 +43,14 @@ func (c *config) validate() error {
 	if err != nil || portErr != nil || number < minimumTCPPort || number > maximumTCPPort {
 		return errors.New("invalid HTTP listen address")
 	}
+	c.HTTP.TrustedProxyNets = make([]*net.IPNet, 0, len(c.HTTP.TrustedProxyCIDRs))
+	for _, cidr := range c.HTTP.TrustedProxyCIDRs {
+		_, network, err := net.ParseCIDR(cidr)
+		if err != nil {
+			return errors.New("http.trusted_proxy_cidrs must contain valid CIDR ranges")
+		}
+		c.HTTP.TrustedProxyNets = append(c.HTTP.TrustedProxyNets, network)
+	}
 	if c.MySQL.MaxOpenConns <= 0 || c.MySQL.MaxIdleConns < 0 ||
 		c.MySQL.MaxIdleConns > c.MySQL.MaxOpenConns {
 		return errors.New("invalid MySQL pool capacity")
