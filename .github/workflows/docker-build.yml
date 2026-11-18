@@ -31,6 +31,6 @@ jobs:
           context: .
           platforms: linux/amd64
           push: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
-          tags: ${{ github.ref_type == 'tag' && format('ghcr.io/ovinc-cn/appleremotesign:{0}', github.ref_name) || '' }}
+          tags: ${{ github.ref_type == 'tag' && format('ghcr.io/ovinc-cn/applesign:{0}', github.ref_name) || '' }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}

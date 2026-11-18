@@ -1,0 +1,52 @@
+version: "2"
+
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+
+linters:
+  default: standard
+  exclusions:
+    rules:
+      # 既有 API 的英文错误文案包含句号，调用方与归档工具共用这些信息。
+      - linters: [staticcheck]
+        text: "ST1005:"
+      # 测试夹具使用临时文件、模拟签名工具、回环 Cookie 和 CDN 协议摘要。
+      - path: '_test\.go$'
+        linters: [gosec]
+        text: "G(124|304|306|401|501):"
+  settings:
+    revive:
+      rules:
+        # 不要求软件包注释。
+        - name: package-comments
+          disabled: true
+  enable:
+    - bodyclose
+    - copyloopvar
+    - durationcheck
+    - errname
+    - errorlint
+    - gocritic
+    - gosec
+    - intrange
+    - misspell
+    - nilerr
+    - noctx
+    - prealloc
+    - revive
+    - unconvert
+    - unparam
+    - wastedassign
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+    - golines
+  settings:
+    golines:
+      max-len: 100
+    goimports:
+      local-prefixes:
+        - github.com/OVINC-CN/AppleSign/src/api

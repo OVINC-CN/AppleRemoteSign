@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM python:3.14.9-slim AS rcodesign
+FROM debian:bookworm-slim AS rcodesign
 ARG TARGETARCH
 ARG RCODESIGN_VERSION=0.29.0
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
@@ -19,22 +19,27 @@ RUN set -eu; \
     install -m 0755 /tmp/tool/rcodesign /usr/local/bin/rcodesign; \
     rcodesign --version
 
-FROM python:3.14.9-slim AS runtime
-ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PIP_NO_CACHE_DIR=1
+FROM --platform=$BUILDPLATFORM golang:1.26.10-alpine AS build
+WORKDIR /src
+COPY src/api/go.mod src/api/go.sum ./
+RUN go mod download
+COPY src/api/main.go ./
+COPY src/api/internal/ ./internal/
+ARG TARGETOS
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -mod=readonly -trimpath -o /out/apple-remote-sign .
+
+FROM debian:bookworm-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 10001 signer \
     && useradd --uid 10001 --gid 10001 --home-dir /app --no-create-home signer \
-    && mkdir -p /app /data \
-    && chown -R signer:signer /app /data
+    && mkdir -p /app /data && chown signer:signer /app /data
 WORKDIR /app
+COPY --from=build /out/apple-remote-sign ./apple-remote-sign
 COPY --from=rcodesign /usr/local/bin/rcodesign /usr/local/bin/rcodesign
 COPY --from=rcodesign /tmp/tool/COPYING /usr/local/share/licenses/rcodesign/COPYING
-COPY pyproject.toml LICENSE ./
-RUN python -c 'import pathlib,tomllib; p=tomllib.loads(pathlib.Path("pyproject.toml").read_text()); pathlib.Path("/tmp/requirements.txt").write_text("\n".join(p["project"]["dependencies"]))' \
-    && pip install -r /tmp/requirements.txt && rm /tmp/requirements.txt
-COPY src ./src
-RUN pip install --no-deps .
 USER 10001:10001
 EXPOSE 8000
-CMD ["python", "-m", "apple_remote_sign", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["/app/apple-remote-sign"]
+CMD ["api", "--config", "/app/config.yaml"]

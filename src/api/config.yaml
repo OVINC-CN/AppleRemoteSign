@@ -1,0 +1,84 @@
+http:
+  read_header_timeout: 10s
+  idle_timeout: 60s
+app:
+  name: apple-remote-sign
+  environment: production
+  addr: ":8000"
+  log_level: info
+  shutdown_timeout: 3700s
+mysql:
+  # 生产部署必须填写 DSN。空值仅用于离线单元测试。
+  dsn: ""
+  connect_timeout: 10s
+  read_timeout: 30s
+  write_timeout: 30s
+  max_open_conns: 15
+  max_idle_conns: 5
+  conn_max_lifetime: 30m
+  operation_timeout: 10s
+trace:
+  report_enabled: false
+  endpoint: ""
+  insecure: false
+  headers: {}
+  resource_attributes: {}
+  export_timeout: 10s
+  batch_timeout: 5s
+  max_queue_size: 2048
+  max_export_batch_size: 512
+redis:
+  url: ""
+  timeout: "3s"
+oidc:
+  issuer_url: "https://identity.example.com"
+  client_id: "apple-remote-sign"
+  client_secret: ""
+  redirect_uri: "https://api.example.com/api/v1/auth/callback"
+  username_claim: "preferred_username"
+  scopes: "openid profile"
+  token_endpoint_auth_method: "client_secret_basic"
+  allowed_usernames: []
+  admin_usernames: ["admin"]
+  login_ttl: "10m"
+  timeout: "15s"
+web:
+  frontend_url: "https://sign.example.com"
+  allowed_origins: []
+  cookie_domain: ""
+  cookie_name: "ars_session"
+  cookie_secure: true
+  cookie_same_site: "lax"
+  session_ttl: "8h"
+signing:
+  data_dir: "/data"
+  apple_key_file: "/run/secrets/apple-api-key.json"
+  certificate_file: "/run/secrets/signing.p12"
+  password_file: "/run/secrets/signing-password"
+  binary: "/usr/local/bin/rcodesign"
+  work_dir: "/app"
+  config_file: ""
+  command_timeout: "30m"
+  staple_timeout: "2m"
+  apple_timeout: "30s"
+  max_upload_bytes: 2147483648
+  max_extracted_bytes: 4294967296
+  max_archive_entries: 100000
+s3:
+  bucket: "signing-artifacts"
+  prefix: "app-dist/"
+  endpoint_url: ""
+  region: "us-east-1"
+  addressing_style: "auto"
+  connect_timeout: "10s"
+  read_timeout: "60s"
+  access_key_id: ""
+  secret_access_key: ""
+  session_token: ""
+cdn:
+  base_url: "https://download.example.com"
+  sign_key: ""
+  sign_param: "eo_sign"
+wecom:
+  webhook_url: ""
+  timeout: "5s"
