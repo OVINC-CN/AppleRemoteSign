@@ -90,5 +90,3 @@ export function StatusBadge({ status }: { status: JobStatus }) {
     </Badge>
   );
 }
-export const selectClass =
-  'h-8 w-full min-w-0 rounded-md border border-input bg-white px-2.5 text-[13px] outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20 disabled:opacity-50';

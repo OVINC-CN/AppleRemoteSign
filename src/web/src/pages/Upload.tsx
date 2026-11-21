@@ -1,10 +1,11 @@
 import { UploadCloud, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Empty, ErrorBox, PageHeading, selectClass } from '@/components/shared';
+import { Empty, ErrorBox, PageHeading } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import { ApiError, api, errorMessage, upload } from '@/lib/api';
 import { useSession } from '@/lib/session';
 import { type Application, size } from '@/lib/types';
@@ -51,16 +52,6 @@ export function UploadPage() {
       controller.abort();
     };
   }, []);
-  useEffect(() => {
-    if (!busy) {
-      return;
-    }
-    const guard = (event: BeforeUnloadEvent) => event.preventDefault();
-    window.addEventListener('beforeunload', guard);
-    return () => window.removeEventListener('beforeunload', guard);
-  }, [
-    busy,
-  ]);
   function choose(candidate?: File) {
     if (busy || !candidate) {
       return;
@@ -134,30 +125,29 @@ export function UploadPage() {
             <CardContent className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="application">所属应用</Label>
-                <select
+                <Select
                   id="application"
                   disabled={busy}
-                  className={selectClass}
                   value={application}
-                  onChange={(event) => setApplication(event.target.value)}
-                >
-                  <option value="">请选择应用</option>
-                  {applications.map((app) => (
-                    <option
-                      key={app.id}
-                      value={app.id}
-                    >
-                      {app.name} · {app.identifier}
-                    </option>
-                  ))}
-                </select>
+                  onValueChange={setApplication}
+                  options={[
+                    {
+                      value: '',
+                      label: '请选择应用',
+                    },
+                    ...applications.map((app) => ({
+                      value: app.id,
+                      label: `${app.name} · ${app.identifier}`,
+                    })),
+                  ]}
+                />
               </div>
               <input
                 ref={input}
                 aria-label="选择 ZIP 文件"
                 type="file"
                 accept=".zip,application/zip"
-                className="sr-only"
+                hidden
                 disabled={busy}
                 onChange={(event) => {
                   choose(event.target.files?.[0]);
@@ -230,17 +220,18 @@ export function UploadPage() {
                   </div>
                   <p className="mt-2 text-xs leading-5 text-muted-foreground">
                     上传完成后，服务仍需签名并提交
-                    Apple。请保持页面打开；断开连接不会取消任务。
+                    Apple。请保持页面打开，断开连接不会取消任务。
                   </p>
                 </div>
               )}
               <Button
                 className="w-full"
-                disabled={!file || !application || busy}
+                disabled={!file || !application}
+                loading={busy}
+                icon={UploadCloud}
                 onClick={() => void submit()}
               >
-                <UploadCloud className="size-4" />
-                {busy ? '处理中，请稍候…' : '开始签名'}
+                开始签名
               </Button>
               <p className="text-xs leading-5 text-muted-foreground">
                 出现超时或连接错误时，请先到

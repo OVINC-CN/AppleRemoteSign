@@ -320,7 +320,7 @@ it('starts a manual refresh immediately and cancels it when leaving the page', a
   expect(options?.signal?.aborted).toBe(false);
   expect(
     screen.getByRole('button', {
-      name: '刷新中…',
+      name: '刷新状态',
     }),
   ).toBeDisabled();
   view.unmount();

@@ -107,6 +107,7 @@ export function JobRenameDialog({
           </DialogDescription>
         </DialogHeader>
         <form
+          noValidate
           className="space-y-4"
           onSubmit={(event) => {
             event.preventDefault();
@@ -136,9 +137,10 @@ export function JobRenameDialog({
             </Button>
             <Button
               type="submit"
-              disabled={saving || !name.trim()}
+              disabled={!name.trim()}
+              loading={saving}
             >
-              {saving ? '保存中…' : '保存名称'}
+              保存名称
             </Button>
           </DialogFooter>
         </form>

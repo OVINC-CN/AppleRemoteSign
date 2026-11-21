@@ -1,9 +1,11 @@
 import { ArrowUpRight, KeyRound } from 'lucide-react';
+import { useState } from 'react';
 import {
   Link,
   Navigate,
   Route,
   Routes,
+  useMatch,
   useSearchParams,
 } from 'react-router-dom';
 import { ErrorBox, Loading } from '@/components/shared';
@@ -17,8 +19,12 @@ import { JobPage } from '@/pages/Job';
 import { UploadPage } from '@/pages/Upload';
 
 function Login() {
-  const { user, error, reload } = useSession();
+  const { user, error, loading, reload } = useSession();
   const [params] = useSearchParams();
+  const [checking, setChecking] = useState(false);
+  if (loading && !checking) {
+    return <Loading />;
+  }
   if (user) {
     return (
       <Navigate
@@ -72,11 +78,19 @@ function Login() {
               </a>
             </Button>
           )}
-          {error && (
+          {(error || checking) && (
             <Button
               variant="ghost"
               className="mt-3 w-full"
-              onClick={() => void reload()}
+              loading={checking}
+              onClick={async () => {
+                setChecking(true);
+                try {
+                  await reload();
+                } finally {
+                  setChecking(false);
+                }
+              }}
             >
               重新检查连接
             </Button>
@@ -101,7 +115,8 @@ function AdminGuard() {
 }
 export default function App() {
   const { loading } = useSession();
-  if (loading) {
+  const login = useMatch('/login');
+  if (loading && !login) {
     return <Loading />;
   }
   return (

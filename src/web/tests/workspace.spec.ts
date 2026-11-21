@@ -282,14 +282,21 @@ test('member uploads, refreshes, downloads and opens a static deep link', async 
     })
     .first()
     .click();
-  const applications = await page
-    .getByLabel('所属应用')
-    .locator('option')
-    .allTextContents();
-  expect(applications.join(' ')).not.toContain('Private');
-  await page.getByLabel('所属应用').selectOption({
-    label: 'Desktop · com.example.desktop',
-  });
+  await page
+    .getByRole('combobox', {
+      name: '所属应用',
+    })
+    .click();
+  await expect(
+    page.getByRole('option', {
+      name: /Private/,
+    }),
+  ).toHaveCount(0);
+  await page
+    .getByRole('option', {
+      name: 'Desktop · com.example.desktop',
+    })
+    .click();
   await page.getByLabel('选择 ZIP 文件').setInputFiles({
     name: 'BrowserApp-v1.2.3-beta.1.zip',
     mimeType: 'application/zip',
@@ -643,7 +650,7 @@ test('leaving a job aborts its pending refresh and sends no follow-up detail req
     await requested;
     await expect(
       page.getByRole('button', {
-        name: '刷新中…',
+        name: '刷新状态',
         exact: true,
       }),
     ).toBeDisabled();

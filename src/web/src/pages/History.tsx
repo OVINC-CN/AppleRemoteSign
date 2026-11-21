@@ -8,11 +8,11 @@ import {
   Loading,
   PageHeading,
   StatusBadge,
-  selectClass,
 } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -21,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Tooltip } from '@/components/ui/tooltip';
 import { api, errorMessage } from '@/lib/api';
 import {
   type Application,
@@ -166,62 +167,60 @@ export function HistoryPage() {
             <Button
               variant="outline"
               type="submit"
+              loading={loading}
             >
               搜索
             </Button>
           </form>
-          <select
+          <Select
             aria-label="筛选应用"
-            className={selectClass}
             value={params.get('application_id') || ''}
-            onChange={(event) => filter('application_id', event.target.value)}
-          >
-            <option value="">所有可见应用</option>
-            {applications.map((app) => (
-              <option
-                key={app.id}
-                value={app.id}
-              >
-                {app.name}
-              </option>
-            ))}
-          </select>
-          <select
+            onValueChange={(value) => filter('application_id', value)}
+            options={[
+              {
+                value: '',
+                label: '所有可见应用',
+              },
+              ...applications.map((app) => ({
+                value: app.id,
+                label: app.name,
+              })),
+            ]}
+          />
+          <Select
             aria-label="筛选状态"
-            className={selectClass}
             value={params.get('status') || ''}
-            onChange={(event) => filter('status', event.target.value)}
-          >
-            <option value="">全部状态</option>
-            {Object.entries(statusLabels).map(([value, label]) => (
-              <option
-                key={value}
-                value={value}
-              >
-                {label}
-              </option>
-            ))}
-          </select>
-          <Button
-            variant="outline"
-            disabled={loading}
-            aria-label="刷新签名历史"
-            title="刷新当前筛选下的签名历史"
-            className="col-span-2 min-w-20 justify-self-end lg:col-span-1"
-            onClick={() => {
-              if (loading) {
-                return;
-              }
-              setLoading(true);
-              setRevision((value) => value + 1);
-            }}
-          >
-            <RefreshCw
-              aria-hidden="true"
-              className={`size-3.5 ${loading ? 'animate-spin' : ''}`}
-            />
-            {loading ? '刷新中…' : '刷新'}
-          </Button>
+            onValueChange={(value) => filter('status', value)}
+            options={[
+              {
+                value: '',
+                label: '全部状态',
+              },
+              ...Object.entries(statusLabels).map(([value, label]) => ({
+                value,
+                label,
+              })),
+            ]}
+          />
+          <Tooltip text="刷新当前筛选下的签名历史">
+            <Button
+              variant="outline"
+              loading={loading}
+              icon={RefreshCw}
+              iconClassName="size-3.5"
+              aria-label="刷新签名历史"
+              className="col-span-2 min-w-20 justify-self-end lg:col-span-1"
+              onClick={() => {
+                if (loading) {
+                  return;
+                }
+                setLoading(true);
+                setRevision((value) => value + 1);
+              }}
+            >
+              刷新
+            </Button>
+          </Tooltip>
         </div>
         <div className="px-4">
           <ErrorBox message={error} />
@@ -273,60 +272,59 @@ export function HistoryPage() {
                   className="focus-within:bg-muted/50"
                 >
                   <TableCell>
-                    <Link
-                      to={`/jobs/${job.id}`}
-                      title={job.display_name}
-                      className="block truncate font-medium hover:text-primary focus-visible:underline"
+                    <Tooltip text={job.display_name}>
+                      <Link
+                        to={`/jobs/${job.id}`}
+                        className="block truncate font-medium hover:text-primary focus-visible:underline"
+                      >
+                        {job.display_name}
+                      </Link>
+                    </Tooltip>
+                    <Tooltip
+                      text={`${job.filename} · ${job.application.name} · ${size(job.size_bytes)}`}
                     >
-                      {job.display_name}
-                    </Link>
-                    <div
-                      title={`${job.filename} · ${job.application.name} · ${size(job.size_bytes)}`}
-                      className="mt-0.5 truncate text-xs leading-4 text-muted-foreground"
-                    >
-                      {job.display_name !== job.filename && (
-                        <>{job.filename} · </>
-                      )}
-                      {job.application.name} · {size(job.size_bytes)}
-                    </div>
+                      <div className="mt-0.5 truncate text-xs leading-4 text-muted-foreground">
+                        {job.display_name !== job.filename && (
+                          <>{job.filename} · </>
+                        )}
+                        {job.application.name} · {size(job.size_bytes)}
+                      </div>
+                    </Tooltip>
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
                     <StatusBadge status={job.status} />
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    <span
-                      className="block truncate"
-                      title={job.source}
-                    >
-                      {job.source}
-                    </span>
+                    <Tooltip text={job.source}>
+                      <span className="block truncate">{job.source}</span>
+                    </Tooltip>
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">
-                    <time
-                      dateTime={job.created_at}
-                      title={date(job.created_at)}
-                    >
-                      {new Date(job.created_at)
-                        .toLocaleString('zh-CN', {
-                          month: '2-digit',
-                          day: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          hour12: false,
-                        })
-                        .replaceAll('/', '-')}
-                    </time>
+                    <Tooltip text={date(job.created_at)}>
+                      <time dateTime={job.created_at}>
+                        {new Date(job.created_at)
+                          .toLocaleString('zh-CN', {
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false,
+                          })
+                          .replaceAll('/', '-')}
+                      </time>
+                    </Tooltip>
                   </TableCell>
-                  <TableCell
-                    className="whitespace-nowrap text-xs tabular-nums text-muted-foreground"
-                    title="时:分:秒"
-                  >
-                    {duration(
-                      job.created_at,
-                      job.status === 'completed' || job.status === 'failed'
-                        ? job.updated_at
-                        : now,
-                    )}
+                  <TableCell className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">
+                    <Tooltip text="时:分:秒">
+                      <span>
+                        {duration(
+                          job.created_at,
+                          job.status === 'completed' || job.status === 'failed'
+                            ? job.updated_at
+                            : now,
+                        )}
+                      </span>
+                    </Tooltip>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">

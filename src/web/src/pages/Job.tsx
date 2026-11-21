@@ -52,7 +52,6 @@ export function JobPage() {
       }
       notaryPending.current = true;
       setNotaryLoading(true);
-      setNotaryError('');
       try {
         const details = await api<NotaryDetails | null>(
           `${path}/notary-details`,
@@ -66,6 +65,7 @@ export function JobPage() {
         }
         notaryCache.current = details;
         setNotary(details);
+        setNotaryError('');
       } catch (error) {
         if (!active()) {
           return;
@@ -321,11 +321,12 @@ export function JobPage() {
               />
               <Button
                 variant="outline"
-                disabled={busy || renaming || notaryLoading}
+                disabled={renaming || notaryLoading}
+                loading={busy}
+                icon={RefreshCw}
                 onClick={() => void refresh()}
               >
-                <RefreshCw className={`size-4 ${busy ? 'animate-spin' : ''}`} />
-                {busy ? '刷新中…' : '刷新状态'}
+                刷新状态
               </Button>
               {job.status === 'completed' && (
                 <ArtifactDownloadButton
@@ -445,7 +446,7 @@ export function JobPage() {
               details={notary}
               loading={notaryLoading}
               error={notaryError}
-              disabled={busy || renaming || notaryLoading}
+              disabled={busy || renaming}
               onRetry={() => {
                 const controller = requests.current;
                 if (controller && !running.current && !renaming) {

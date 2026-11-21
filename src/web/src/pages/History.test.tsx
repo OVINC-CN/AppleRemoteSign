@@ -317,6 +317,8 @@ it('refreshes the same filtered page without hiding rows or duplicating requests
   });
   fireEvent.click(refresh);
   expect(refresh).toBeDisabled();
+  expect(refresh).toHaveTextContent('刷新');
+  expect(refresh.querySelector('svg')).toHaveClass('animate-spin');
   expect(
     screen.getByRole('link', {
       name: 'App-v1.2.3.zip',
@@ -325,8 +327,8 @@ it('refreshes the same filtered page without hiding rows or duplicating requests
   fireEvent.click(refresh);
   expect(api).toHaveBeenCalledTimes(3);
   expect(vi.mocked(api).mock.calls[2][0]).toBe(vi.mocked(api).mock.calls[1][0]);
-  expect(screen.getByLabelText('筛选应用')).toHaveValue('app');
-  expect(screen.getByLabelText('筛选状态')).toHaveValue('processing');
+  expect(screen.getByLabelText('筛选应用')).toHaveTextContent('Desktop');
+  expect(screen.getByLabelText('筛选状态')).toHaveTextContent('处理中');
   expect(screen.getByText('第 2 页')).toBeInTheDocument();
   await act(async () => {
     finish({
@@ -410,11 +412,24 @@ it('aborts an obsolete refresh when filters change and ignores its late response
     ],
   });
   await act(async () => {
-    fireEvent.change(screen.getByLabelText('筛选状态'), {
-      target: {
-        value: 'failed',
+    fireEvent.keyDown(
+      screen.getByRole('combobox', {
+        name: '筛选状态',
+      }),
+      {
+        key: 'Enter',
       },
-    });
+    );
+  });
+  await act(async () => {
+    fireEvent.keyDown(
+      screen.getByRole('option', {
+        name: '失败',
+      }),
+      {
+        key: 'Enter',
+      },
+    );
   });
   expect(refreshSignal?.aborted).toBe(true);
   const [path, options] = vi.mocked(api).mock.calls[3];
