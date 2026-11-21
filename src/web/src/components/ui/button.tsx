@@ -1,4 +1,5 @@
 import { cva, type VariantProps } from 'class-variance-authority';
+import { LoaderCircle, type LucideIcon } from 'lucide-react';
 import { Slot } from 'radix-ui';
 import type * as React from 'react';
 import { cn } from '@/lib/utils';
@@ -42,10 +43,19 @@ function Button({
   variant = 'default',
   size = 'default',
   asChild = false,
+  type = 'button',
+  disabled,
+  loading = false,
+  icon,
+  iconClassName,
+  children,
   ...props
 }: React.ComponentProps<'button'> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean;
+    loading?: boolean;
+    icon?: LucideIcon;
+    iconClassName?: string;
   }) {
   const Comp = asChild ? Slot.Root : 'button';
 
@@ -54,6 +64,9 @@ function Button({
       data-slot="button"
       data-variant={variant}
       data-size={size}
+      type={asChild ? undefined : type}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
       className={cn(
         buttonVariants({
           variant,
@@ -62,8 +75,41 @@ function Button({
         }),
       )}
       {...props}
+    >
+      {asChild ? (
+        children
+      ) : (
+        <>
+          {icon && (
+            <ButtonIcon
+              icon={icon}
+              loading={loading}
+              className={iconClassName}
+            />
+          )}
+          {children}
+        </>
+      )}
+    </Comp>
+  );
+}
+
+function ButtonIcon({
+  icon,
+  loading,
+  className,
+}: {
+  icon: LucideIcon;
+  loading?: boolean;
+  className?: string;
+}) {
+  const Icon = loading ? LoaderCircle : icon;
+  return (
+    <Icon
+      aria-hidden="true"
+      className={cn(className, loading && 'animate-spin')}
     />
   );
 }
 
-export { Button, buttonVariants };
+export { Button, ButtonIcon, buttonVariants };

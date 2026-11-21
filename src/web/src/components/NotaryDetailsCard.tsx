@@ -4,6 +4,7 @@ import { ErrorBox, Loading } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tooltip } from '@/components/ui/tooltip';
 import { buildNotaryTopology, nodeHeight, nodeWidth } from '@/lib/notary';
 import { date, type NotaryDetails } from '@/lib/types';
 
@@ -38,13 +39,14 @@ export function NotaryDetailsCard({
         {loading && <Loading />}
         {error && (
           <div>
-            <ErrorBox message={error} />
+            {!loading && <ErrorBox message={error} />}
             <Button
               variant="outline"
               disabled={disabled}
+              loading={loading}
+              icon={RefreshCw}
               onClick={onRetry}
             >
-              <RefreshCw className="size-4" />
               重试获取详情
             </Button>
           </div>
@@ -204,36 +206,39 @@ function NotaryTopology({ details }: { details: NotaryDetails }) {
               ),
             ];
             return (
-              <button
+              <Tooltip
                 key={node.id}
-                type="button"
-                aria-label={node.path}
-                aria-pressed={selected.id === node.id}
-                title={node.path}
-                onClick={() => setSelectedId(node.id)}
-                style={{
-                  left: node.x,
-                  top: node.y,
-                  width: nodeWidth,
-                  height: nodeHeight,
-                }}
-                className={`absolute rounded-md border bg-white px-3 py-2 text-left shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected.id === node.id ? 'border-primary ring-1 ring-primary' : 'border-border hover:border-slate-400'}`}
+                text={node.path}
               >
-                <span className="flex items-center gap-2">
-                  <Icon
-                    aria-hidden="true"
-                    className={`size-4 shrink-0 ${node.signatures.length ? 'text-emerald-700' : 'text-muted-foreground'}`}
-                  />
-                  <span className="truncate text-[13px] font-medium">
-                    {node.name}
+                <button
+                  type="button"
+                  aria-label={node.path}
+                  aria-pressed={selected.id === node.id}
+                  onClick={() => setSelectedId(node.id)}
+                  style={{
+                    left: node.x,
+                    top: node.y,
+                    width: nodeWidth,
+                    height: nodeHeight,
+                  }}
+                  className={`absolute rounded-md border bg-white px-3 py-2 text-left shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected.id === node.id ? 'border-primary ring-1 ring-primary' : 'border-border hover:border-slate-400'}`}
+                >
+                  <span className="flex items-center gap-2">
+                    <Icon
+                      aria-hidden="true"
+                      className={`size-4 shrink-0 ${node.signatures.length ? 'text-emerald-700' : 'text-muted-foreground'}`}
+                    />
+                    <span className="truncate text-[13px] font-medium">
+                      {node.name}
+                    </span>
                   </span>
-                </span>
-                <span className="mt-1.5 block truncate text-xs text-muted-foreground">
-                  {architectures.length
-                    ? architectures.join(' · ')
-                    : kindLabels[node.kind]}
-                </span>
-              </button>
+                  <span className="mt-1.5 block truncate text-xs text-muted-foreground">
+                    {architectures.length
+                      ? architectures.join(' · ')
+                      : kindLabels[node.kind]}
+                  </span>
+                </button>
+              </Tooltip>
             );
           })}
         </div>

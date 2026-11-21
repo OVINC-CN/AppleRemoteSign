@@ -73,7 +73,9 @@ it.each([
     </MemoryRouter>,
   );
   await waitFor(() =>
-    expect(screen.getByLabelText('所属应用')).toHaveValue('allowed'),
+    expect(screen.getByLabelText('所属应用')).toHaveTextContent(
+      'Allowed · com.app',
+    ),
   );
   fireEvent.change(screen.getByLabelText('选择 ZIP 文件'), {
     target: {
@@ -118,7 +120,9 @@ it.each([
       </MemoryRouter>,
     );
     await waitFor(() =>
-      expect(screen.getByLabelText('所属应用')).toHaveValue('allowed'),
+      expect(screen.getByLabelText('所属应用')).toHaveTextContent(
+        'Allowed · com.app',
+      ),
     );
     fireEvent.change(screen.getByLabelText('选择 ZIP 文件'), {
       target: {

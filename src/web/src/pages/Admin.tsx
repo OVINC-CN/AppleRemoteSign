@@ -37,6 +37,14 @@ import { Label } from '@/components/ui/label';
 import { api, errorMessage } from '@/lib/api';
 import { type ApiKey, type Application, date } from '@/lib/types';
 
+type Operation =
+  | 'create-app'
+  | 'update-app'
+  | 'save-grants'
+  | 'create-key'
+  | 'revoke-key';
+const identifierFormat = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+
 export function AdminPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [selected, setSelected] = useState('');
@@ -47,15 +55,20 @@ export function AdminPage() {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [operation, setOperation] = useState<Operation | null>(null);
+  const busy = operation !== null;
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState('');
   const [identifier, setIdentifier] = useState('');
+  const [identifierInvalid, setIdentifierInvalid] = useState(false);
   const [editName, setEditName] = useState('');
   const [enabled, setEnabled] = useState(true);
   const [keyName, setKeyName] = useState('');
   const [secret, setSecret] = useState('');
   const [copied, setCopied] = useState(false);
+  const [copying, setCopying] = useState(false);
+  const [copyError, setCopyError] = useState('');
+  const [revokeKeyId, setRevokeKeyId] = useState('');
   const app = applications.find((item) => item.id === selected);
   const prefix = `/api/v1/admin/applications/${selected}`;
   const loadApps = useCallback(async (signal?: AbortSignal) => {
@@ -142,36 +155,54 @@ export function AdminPage() {
   }, [
     app,
   ]);
-  async function act(operation: () => Promise<void>, message = '') {
-    setBusy(true);
+  async function act(kind: Operation, run: () => Promise<void>, message = '') {
+    if (busy) {
+      return;
+    }
+    setOperation(kind);
     setError('');
     setSuccess('');
     try {
-      await operation();
+      await run();
       setSuccess(message);
     } catch (error) {
       setError(errorMessage(error));
     } finally {
-      setBusy(false);
+      setOperation(null);
     }
   }
-  const createApplication = () =>
-    act(async () => {
-      const created = await api<Application>('/api/v1/admin/applications', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: name.trim(),
-          identifier: identifier.trim(),
-        }),
-      });
-      await loadApps();
-      setSelected(created.id);
-      setCreateOpen(false);
-      setName('');
-      setIdentifier('');
-    }, '应用已创建。');
-  const createKey = () =>
-    act(async () => {
+  function createApplication() {
+    if (!name.trim() || !identifier.trim()) {
+      return;
+    }
+    if (!identifierFormat.test(identifier)) {
+      setIdentifierInvalid(true);
+      return;
+    }
+    return act(
+      'create-app',
+      async () => {
+        const created = await api<Application>('/api/v1/admin/applications', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: name.trim(),
+            identifier: identifier.trim(),
+          }),
+        });
+        await loadApps();
+        setSelected(created.id);
+        setCreateOpen(false);
+        setName('');
+        setIdentifier('');
+      },
+      '应用已创建。',
+    );
+  }
+  function createKey() {
+    if (!keyName.trim()) {
+      return;
+    }
+    return act('create-key', async () => {
       const result = await api<{
         key: ApiKey;
         token: string;
@@ -187,8 +218,23 @@ export function AdminPage() {
       ]);
       setSecret(result.token);
       setCopied(false);
+      setCopyError('');
       setKeyName('');
     });
+  }
+  async function copyKey() {
+    setCopying(true);
+    setCopied(false);
+    setCopyError('');
+    try {
+      await navigator.clipboard.writeText(secret);
+      setCopied(true);
+    } catch {
+      setCopyError('复制失败，请手动选中并保存 Key。');
+    } finally {
+      setCopying(false);
+    }
+  }
   return (
     <>
       <PageHeading
@@ -197,15 +243,20 @@ export function AdminPage() {
         action={
           <Dialog
             open={createOpen}
-            onOpenChange={setCreateOpen}
+            onOpenChange={(open) => {
+              if (!busy) {
+                setCreateOpen(open);
+                setIdentifierInvalid(false);
+              }
+            }}
           >
             <DialogTrigger asChild>
-              <Button>
+              <Button disabled={busy}>
                 <Plus className="size-4" />
                 新建应用
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent showCloseButton={!busy}>
               <DialogHeader>
                 <DialogTitle>新建应用</DialogTitle>
                 <DialogDescription>
@@ -213,6 +264,7 @@ export function AdminPage() {
                 </DialogDescription>
               </DialogHeader>
               <form
+                noValidate
                 className="space-y-4"
                 onSubmit={(event) => {
                   event.preventDefault();
@@ -236,19 +288,36 @@ export function AdminPage() {
                     id="new-identifier"
                     required
                     maxLength={128}
-                    pattern="[A-Za-z0-9][A-Za-z0-9._\-]*"
+                    aria-invalid={identifierInvalid || undefined}
+                    aria-describedby={
+                      identifierInvalid ? 'new-identifier-error' : undefined
+                    }
                     value={identifier}
-                    onChange={(event) => setIdentifier(event.target.value)}
+                    onChange={(event) => {
+                      setIdentifier(event.target.value);
+                      setIdentifierInvalid(false);
+                    }}
                     placeholder="com.example.desktop"
                   />
+                  {identifierInvalid && (
+                    <p
+                      id="new-identifier-error"
+                      role="alert"
+                      className="text-xs text-destructive"
+                    >
+                      Identifier
+                      必须以字母或数字开头，仅可包含字母、数字、点、下划线和连字符。
+                    </p>
+                  )}
                 </div>
                 <ErrorBox message={error} />
                 <Button
                   type="submit"
                   disabled={busy || !name.trim() || !identifier.trim()}
+                  loading={operation === 'create-app'}
                   className="w-full"
                 >
-                  {busy ? '创建中…' : '创建应用'}
+                  创建应用
                 </Button>
               </form>
             </DialogContent>
@@ -321,19 +390,27 @@ export function AdminPage() {
                 </CardHeader>
                 <CardContent>
                   <form
+                    noValidate
                     className="flex flex-wrap items-end gap-3"
                     onSubmit={(event) => {
                       event.preventDefault();
-                      void act(async () => {
-                        await api(prefix, {
-                          method: 'PATCH',
-                          body: JSON.stringify({
-                            name: editName.trim(),
-                            enabled,
-                          }),
-                        });
-                        await loadApps();
-                      }, '应用设置已保存。');
+                      if (!editName.trim()) {
+                        return;
+                      }
+                      void act(
+                        'update-app',
+                        async () => {
+                          await api(prefix, {
+                            method: 'PATCH',
+                            body: JSON.stringify({
+                              name: editName.trim(),
+                              enabled,
+                            }),
+                          });
+                          await loadApps();
+                        },
+                        '应用设置已保存。',
+                      );
                     }}
                   >
                     <div className="min-w-0 flex-[1_1_192px] space-y-1.5">
@@ -362,6 +439,7 @@ export function AdminPage() {
                       type="submit"
                       variant="outline"
                       disabled={busy || !editName.trim()}
+                      loading={operation === 'update-app'}
                     >
                       保存应用
                     </Button>
@@ -415,15 +493,20 @@ export function AdminPage() {
                     </div>
                     <Button
                       disabled={busy}
+                      loading={operation === 'save-grants'}
                       onClick={() =>
-                        void act(async () => {
-                          await api(`${prefix}/users`, {
-                            method: 'PUT',
-                            body: JSON.stringify({
-                              usernames: grants,
-                            }),
-                          });
-                        }, '用户授权已保存，即刻生效。')
+                        void act(
+                          'save-grants',
+                          async () => {
+                            await api(`${prefix}/users`, {
+                              method: 'PUT',
+                              body: JSON.stringify({
+                                usernames: grants,
+                              }),
+                            });
+                          },
+                          '用户授权已保存，即刻生效。',
+                        )
                       }
                     >
                       保存授权
@@ -445,6 +528,7 @@ export function AdminPage() {
                   </CardHeader>
                   <CardContent>
                     <form
+                      noValidate
                       className="mb-4 flex flex-wrap gap-2 sm:flex-nowrap"
                       onSubmit={(event) => {
                         event.preventDefault();
@@ -462,8 +546,9 @@ export function AdminPage() {
                       <Button
                         type="submit"
                         disabled={busy || !keyName.trim()}
+                        loading={operation === 'create-key'}
+                        icon={Plus}
                       >
-                        <Plus className="size-4" />
                         创建 Key
                       </Button>
                     </form>
@@ -500,7 +585,15 @@ export function AdminPage() {
                               </p>
                             </div>
                             {!key.revoked_at && (
-                              <AlertDialog>
+                              <AlertDialog
+                                open={revokeKeyId === key.id}
+                                onOpenChange={(open) => {
+                                  if (!busy) {
+                                    setError('');
+                                    setRevokeKeyId(open ? key.id : '');
+                                  }
+                                }}
+                              >
                                 <AlertDialogTrigger asChild>
                                   <Button
                                     variant="outline"
@@ -521,24 +614,37 @@ export function AdminPage() {
                                       Key。
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
+                                  <ErrorBox message={error} />
                                   <AlertDialogFooter>
-                                    <AlertDialogCancel>取消</AlertDialogCancel>
+                                    <AlertDialogCancel disabled={busy}>
+                                      取消
+                                    </AlertDialogCancel>
                                     <AlertDialogAction
-                                      onClick={() =>
-                                        void act(async () => {
-                                          await api(
-                                            `${prefix}/keys/${key.id}/revoke`,
-                                            {
-                                              method: 'POST',
-                                            },
-                                          );
-                                          setKeys(
-                                            await api<ApiKey[]>(
-                                              `${prefix}/keys`,
-                                            ),
-                                          );
-                                        }, 'Key 已吊销。')
+                                      disabled={busy}
+                                      aria-busy={
+                                        operation === 'revoke-key' || undefined
                                       }
+                                      onClick={(event) => {
+                                        event.preventDefault();
+                                        void act(
+                                          'revoke-key',
+                                          async () => {
+                                            await api(
+                                              `${prefix}/keys/${key.id}/revoke`,
+                                              {
+                                                method: 'POST',
+                                              },
+                                            );
+                                            setKeys(
+                                              await api<ApiKey[]>(
+                                                `${prefix}/keys`,
+                                              ),
+                                            );
+                                            setRevokeKeyId('');
+                                          },
+                                          'Key 已吊销。',
+                                        );
+                                      }}
                                     >
                                       确认吊销
                                     </AlertDialogAction>
@@ -560,12 +666,12 @@ export function AdminPage() {
       <Dialog
         open={!!secret}
         onOpenChange={(open) => {
-          if (!open) {
+          if (!open && !copying) {
             setSecret('');
           }
         }}
       >
-        <DialogContent>
+        <DialogContent showCloseButton={!copying}>
           <DialogHeader>
             <DialogTitle>保存你的 API Key</DialogTitle>
             <DialogDescription>
@@ -582,27 +688,29 @@ export function AdminPage() {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={() => {
-                void navigator.clipboard
-                  .writeText(secret)
-                  .then(() => setCopied(true))
-                  .catch(() => setError('复制失败，请手动选中并保存 Key。'));
-              }}
+              loading={copying}
+              icon={copied ? Check : Copy}
+              onClick={() => void copyKey()}
             >
-              {copied ? (
-                <Check className="size-4" />
-              ) : (
-                <Copy className="size-4" />
-              )}
-              {copied ? '已复制' : '复制 Key'}
+              复制 Key
             </Button>
             <Button
               className="flex-1"
+              disabled={copying}
               onClick={() => setSecret('')}
             >
               已保存，关闭
             </Button>
           </div>
+          <ErrorBox message={copyError} />
+          {copied && (
+            <p
+              role="status"
+              className="text-xs text-emerald-700"
+            >
+              Key 已复制
+            </p>
+          )}
         </DialogContent>
       </Dialog>
     </>

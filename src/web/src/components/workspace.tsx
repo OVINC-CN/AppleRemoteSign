@@ -10,6 +10,7 @@ import { DropdownMenu } from 'radix-ui';
 import { useState } from 'react';
 import { Link, Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { ErrorBox } from '@/components/shared';
+import { ButtonIcon } from '@/components/ui/button';
 import { errorMessage } from '@/lib/api';
 import { useSession } from '@/lib/session';
 import type { Me } from '@/lib/types';
@@ -70,6 +71,7 @@ function AccountMenu({
         <button
           type="button"
           disabled={signingOut}
+          aria-busy={signingOut || undefined}
           aria-label={`${user.username}，${role}，打开用户菜单`}
           className="flex h-8 shrink-0 items-center gap-2 rounded-md px-2 outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-50"
         >
@@ -85,8 +87,9 @@ function AccountMenu({
           <span className="hidden text-xs text-muted-foreground md:block">
             {role}
           </span>
-          <ChevronDown
-            aria-hidden="true"
+          <ButtonIcon
+            icon={ChevronDown}
+            loading={signingOut}
             className="size-3.5 shrink-0 text-muted-foreground"
           />
         </button>
@@ -107,7 +110,7 @@ function AccountMenu({
               aria-hidden="true"
               className="size-4"
             />
-            {signingOut ? '退出中…' : '退出'}
+            退出
           </DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>

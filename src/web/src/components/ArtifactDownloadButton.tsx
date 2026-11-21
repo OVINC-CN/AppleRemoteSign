@@ -1,6 +1,7 @@
-import { ArrowDownToLine, LoaderCircle } from 'lucide-react';
+import { ArrowDownToLine } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import { ApiError, api, errorMessage } from '@/lib/api';
 
 export function ArtifactDownloadButton({
@@ -77,25 +78,21 @@ export function ArtifactDownloadButton({
     }
   }
 
-  const Icon = busy ? LoaderCircle : ArrowDownToLine;
   return (
     <>
-      <Button
-        type="button"
-        aria-label={label}
-        aria-busy={busy}
-        title="在新标签页下载"
-        disabled={busy}
-        size={compact ? 'icon-sm' : 'default'}
-        variant={compact ? 'ghost' : 'default'}
-        onClick={() => void download()}
-      >
-        <Icon
-          aria-hidden="true"
-          className={`${compact ? 'size-3.5' : 'size-4'} ${busy ? 'animate-spin' : ''}`}
-        />
-        {!compact && (busy ? '准备下载…' : label)}
-      </Button>
+      <Tooltip text="在新标签页下载">
+        <Button
+          aria-label={label}
+          loading={busy}
+          icon={ArrowDownToLine}
+          iconClassName={compact ? 'size-3.5' : 'size-4'}
+          size={compact ? 'icon-sm' : 'default'}
+          variant={compact ? 'ghost' : 'default'}
+          onClick={() => void download()}
+        >
+          {!compact && label}
+        </Button>
+      </Tooltip>
       {readyUrl && (
         <Button
           asChild
