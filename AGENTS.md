@@ -7,6 +7,11 @@
 - 所有改动必须在最后一次文件修改后运行 `mise check`（或 `mise run check`），前端 lint、前端生产构建和 Go 后端构建均须通过。检查失败时必须修复后重新执行。
 - 最终回复必须说明检查结果；因环境限制未执行的验证或跳过的集成测试必须明确列出，不得声称已通过。
 
+## 前端约束
+
+- 前端页面路由必须使用固定路径。禁止使用 path params 定义路由或拼接页面 URL，任务 ID、筛选条件等动态值通过 query params 传递。
+- 页面路径统一定义在 `src/web/src/lib/routes.ts`，供前端路由和 `make cdn-urls` 共用。
+
 ## 后端约束
 
 - 每个业务 app 放在 `src/api/internal/apps/<app>`，使用带 app 前缀的 Models、Routers、Svc、Utils、Task 等包。Models 保存结构，Routers 提取和校验参数，Svc 处理业务，Task 处理恢复扫描。

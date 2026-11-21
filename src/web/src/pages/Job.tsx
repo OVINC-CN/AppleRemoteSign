@@ -1,6 +1,6 @@
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { ArtifactDownloadButton } from '@/components/ArtifactDownloadButton';
 import { JobRenameDialog } from '@/components/JobRenameDialog';
 import { NotaryDetailsCard } from '@/components/NotaryDetailsCard';
@@ -13,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ApiError, api, errorMessage } from '@/lib/api';
+import { pagePaths } from '@/lib/routes';
 import {
   date,
   type JobDetail,
@@ -22,7 +23,25 @@ import {
 } from '@/lib/types';
 
 export function JobPage() {
-  const { jobId } = useParams();
+  const [params] = useSearchParams();
+  const jobId = params.get('job_id');
+  if (!jobId || !/^[a-z0-9-]+$/i.test(jobId)) {
+    return (
+      <Navigate
+        to={pagePaths.jobs}
+        replace
+      />
+    );
+  }
+  return (
+    <JobDetails
+      key={jobId}
+      jobId={jobId}
+    />
+  );
+}
+
+function JobDetails({ jobId }: { jobId: string }) {
   const [job, setJob] = useState<JobDetail | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -290,7 +309,7 @@ export function JobPage() {
   return (
     <>
       <Link
-        to="/jobs"
+        to={pagePaths.jobs}
         className="mb-3 inline-flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-primary"
       >
         <ArrowLeft className="size-4" />

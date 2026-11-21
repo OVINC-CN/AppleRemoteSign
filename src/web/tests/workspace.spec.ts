@@ -545,7 +545,7 @@ test('runtime config changes the API destination without rebuilding', async ({
       }),
     });
   });
-  await page.goto('/jobs/some-deep-link');
+  await page.goto('/jobs/detail?job_id=some-deep-link');
   await expect(
     page.getByRole('link', {
       name: '使用 OIDC 登录',
@@ -640,7 +640,7 @@ test('leaving a job aborts its pending refresh and sends no follow-up detail req
       .catch(() => {});
   });
   try {
-    await page.goto(`/jobs/${id}`);
+    await page.goto(`/jobs/detail?job_id=${id}`);
     await page
       .getByRole('button', {
         name: '刷新状态',

@@ -99,7 +99,12 @@ it('keeps history rows visible and shows download errors on the current page', a
     screen.getByRole('link', {
       name: 'App-v1.2.3.zip',
     }),
-  ).toBeInTheDocument();
+  ).toHaveAttribute('href', '/jobs/detail?job_id=one');
+  expect(
+    screen.getByRole('link', {
+      name: '详情',
+    }),
+  ).toHaveAttribute('href', '/jobs/detail?job_id=one');
   expect(screen.getByText('第 2 页')).toBeInTheDocument();
   expect(open).not.toHaveBeenCalled();
   expect(api).toHaveBeenLastCalledWith(

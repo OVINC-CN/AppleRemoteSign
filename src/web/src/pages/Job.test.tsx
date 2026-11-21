@@ -62,19 +62,23 @@ afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
-async function mount() {
+async function mount(initial = '/jobs/detail?job_id=one') {
   let view!: ReturnType<typeof render>;
   await act(async () => {
     view = render(
       <MemoryRouter
         initialEntries={[
-          '/jobs/one',
+          initial,
         ]}
       >
         <Routes>
           <Route
-            path="/jobs/:jobId"
+            path="/jobs/detail"
             element={<JobPage />}
+          />
+          <Route
+            path="/jobs"
+            element={<h1>签名历史</h1>}
           />
         </Routes>
       </MemoryRouter>,
@@ -82,6 +86,21 @@ async function mount() {
   });
   return view;
 }
+
+it.each([
+  '/jobs/detail',
+  '/jobs/detail?job_id=',
+  '/jobs/detail?job_id=..',
+])('returns to history without fetching a job for %s', async (url) => {
+  await mount(url);
+  expect(
+    screen.getByRole('heading', {
+      name: '签名历史',
+    }),
+  ).toBeInTheDocument();
+  expect(api).not.toHaveBeenCalled();
+  expect(notaryApi).not.toHaveBeenCalled();
+});
 
 it('keeps the task visible and shows download errors on the current page', async () => {
   api.mockResolvedValueOnce({
@@ -595,13 +614,13 @@ it('discards results from a previous job after navigation', async () => {
     render(
       <MemoryRouter
         initialEntries={[
-          '/jobs/one',
+          '/jobs/detail?job_id=one',
         ]}
       >
-        <Link to="/jobs/two">另一个任务</Link>
+        <Link to="/jobs/detail?job_id=two">另一个任务</Link>
         <Routes>
           <Route
-            path="/jobs/:jobId"
+            path="/jobs/detail"
             element={<JobPage />}
           />
         </Routes>
