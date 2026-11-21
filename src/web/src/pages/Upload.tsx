@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { ApiError, api, errorMessage, upload } from '@/lib/api';
+import { jobDetailUrl, pagePaths } from '@/lib/routes';
 import { useSession } from '@/lib/session';
 import { type Application, size } from '@/lib/types';
 
@@ -84,7 +85,7 @@ export function UploadPage() {
     setJobId('');
     try {
       const result = await upload(application, file, setProgress);
-      navigate(`/jobs/${result.id}`);
+      navigate(jobDetailUrl(result.id));
     } catch (error) {
       setError(errorMessage(error));
       if (error instanceof ApiError && error.data?.id) {
@@ -107,7 +108,7 @@ export function UploadPage() {
           variant="outline"
           className="mb-4"
         >
-          <Link to={`/jobs/${jobId}`}>查看已创建任务</Link>
+          <Link to={jobDetailUrl(jobId)}>查看已创建任务</Link>
         </Button>
       )}
       {loaded && !applications.length ? (
@@ -236,7 +237,7 @@ export function UploadPage() {
               <p className="text-xs leading-5 text-muted-foreground">
                 出现超时或连接错误时，请先到
                 <Link
-                  to="/jobs"
+                  to={pagePaths.jobs}
                   className="mx-1 text-primary underline"
                 >
                   签名历史

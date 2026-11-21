@@ -12,6 +12,7 @@ import { ErrorBox, Loading } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Brand, WorkspaceLayout } from '@/components/workspace';
 import { apiUrl, errorMessage } from '@/lib/api';
+import { pagePaths } from '@/lib/routes';
 import { useSession } from '@/lib/session';
 import { AdminPage } from '@/pages/Admin';
 import { HistoryPage } from '@/pages/History';
@@ -28,7 +29,7 @@ function Login() {
   if (user) {
     return (
       <Navigate
-        to="/jobs"
+        to={pagePaths.jobs}
         replace
       />
     );
@@ -108,45 +109,45 @@ function AdminGuard() {
     <AdminPage />
   ) : (
     <Navigate
-      to="/jobs"
+      to={pagePaths.jobs}
       replace
     />
   );
 }
 export default function App() {
   const { loading } = useSession();
-  const login = useMatch('/login');
+  const login = useMatch(pagePaths.login);
   if (loading && !login) {
     return <Loading />;
   }
   return (
     <Routes>
       <Route
-        path="/login"
+        path={pagePaths.login}
         element={<Login />}
       />
       <Route element={<WorkspaceLayout />}>
         <Route
-          path="/jobs"
+          path={pagePaths.jobs}
           element={<HistoryPage />}
         />
         <Route
-          path="/jobs/:jobId"
+          path={pagePaths.jobDetail}
           element={<JobPage />}
         />
         <Route
-          path="/upload"
+          path={pagePaths.upload}
           element={<UploadPage />}
         />
         <Route
-          path="/admin/applications"
+          path={pagePaths.adminApplications}
           element={<AdminGuard />}
         />
         <Route
-          path="/"
+          path={pagePaths.home}
           element={
             <Navigate
-              to="/jobs"
+              to={pagePaths.jobs}
               replace
             />
           }
@@ -159,7 +160,7 @@ export default function App() {
                 页面不存在
               </h1>
               <Button asChild>
-                <Link to="/jobs">返回签名历史</Link>
+                <Link to={pagePaths.jobs}>返回签名历史</Link>
               </Button>
             </div>
           }

@@ -8,26 +8,34 @@ import {
 } from 'lucide-react';
 import { DropdownMenu } from 'radix-ui';
 import { useState } from 'react';
-import { Link, Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
+import {
+  Link,
+  Navigate,
+  NavLink,
+  Outlet,
+  useLocation,
+  useMatch,
+} from 'react-router-dom';
 import { ErrorBox } from '@/components/shared';
 import { ButtonIcon } from '@/components/ui/button';
 import { errorMessage } from '@/lib/api';
+import { pagePaths } from '@/lib/routes';
 import { useSession } from '@/lib/session';
 import type { Me } from '@/lib/types';
 
 const navigation = [
   {
-    to: '/jobs',
+    to: pagePaths.jobs,
     icon: History,
     label: '签名历史',
   },
   {
-    to: '/upload',
+    to: pagePaths.upload,
     icon: UploadCloud,
     label: '上传签名',
   },
   {
-    to: '/admin/applications',
+    to: pagePaths.adminApplications,
     icon: KeyRound,
     label: '应用与权限',
   },
@@ -36,7 +44,7 @@ const navigation = [
 export function Brand() {
   return (
     <Link
-      to="/jobs"
+      to={pagePaths.jobs}
       className="inline-flex h-8 shrink-0 items-center gap-2 rounded-sm text-[#1d1d1f] transition-opacity hover:opacity-75 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
     >
       <svg
@@ -121,12 +129,13 @@ function AccountMenu({
 export function WorkspaceLayout() {
   const { user, logout } = useSession();
   const { pathname } = useLocation();
+  const detail = useMatch(pagePaths.jobDetail);
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState('');
   if (!user) {
     return (
       <Navigate
-        to="/login"
+        to={pagePaths.login}
         replace
       />
     );
@@ -146,7 +155,6 @@ export function WorkspaceLayout() {
       setSigningOut(false);
     }
   }
-  const detail = pathname.startsWith('/jobs/');
   const current = detail
     ? '任务详情'
     : navigation.find((item) => pathname === item.to)?.label || '页面不存在';
@@ -167,7 +175,10 @@ export function WorkspaceLayout() {
             className="order-3 flex w-full items-center gap-1 overflow-x-auto md:order-2 md:w-auto md:flex-1"
           >
             {navigation
-              .filter((item) => user.is_admin || !item.to.startsWith('/admin'))
+              .filter(
+                (item) =>
+                  user.is_admin || item.to !== pagePaths.adminApplications,
+              )
               .map(({ to, icon: Icon, label }) => (
                 <NavLink
                   key={to}
@@ -210,7 +221,7 @@ export function WorkspaceLayout() {
           {detail && (
             <>
               <Link
-                to="/jobs"
+                to={pagePaths.jobs}
                 className="hover:text-foreground"
               >
                 签名历史

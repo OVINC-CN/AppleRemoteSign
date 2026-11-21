@@ -113,9 +113,21 @@ window.__APP_CONFIG__ = {
 };
 ```
 
-同域部署时可将 `API_BASE_UR` 设为空字符串。反向代理将 `/api/`、`/openapi/`、`/health`、`/ready` 转发至后端，静态服务器将页面深层路由回退到 `index.html`。
+同域部署时可将 `API_BASE_UR` 设为空字符串。反向代理将 `/api/`、`/openapi/`、`/health`、`/ready` 转发至后端，静态服务器将前端页面路径回退到 `index.html`。
 
 访问工作台，使用管理员账号登录，在“应用与权限”中创建应用、保存用户授权，并按需签发 CI 使用的 Key。
+
+### 前端 CDN 刷新
+
+完成前端构建后，在仓库根目录生成刷新清单：
+
+```sh
+cdn_manifest=$(mktemp)
+mise exec -- make cdn-urls CDN_ORIGIN=https://sign.example.com > "$cdn_manifest"
+```
+
+`CDN_ORIGIN` 填写前端站点的协议和域名，`CDN_WEB_DIST` 默认指向 `src/web/dist`。清单逐行列出固定页面和构建目录中的静态文件，可提交给 CDN 刷新。
+页面 HTML 的 CDN 缓存键应忽略查询参数，例如 `/jobs/detail?job_id=…` 统一使用 `/jobs/detail` 的缓存键。
 
 ## 使用
 

@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
 import { api, errorMessage } from '@/lib/api';
+import { jobDetailUrl, pagePaths } from '@/lib/routes';
 import {
   type Application,
   date,
@@ -130,7 +131,7 @@ export function HistoryPage() {
         description="查看你有权限的应用的签名与公证记录。"
         action={
           <Button asChild>
-            <Link to="/upload">
+            <Link to={pagePaths.upload}>
               <Plus className="size-4" />
               上传签名
             </Link>
@@ -274,7 +275,7 @@ export function HistoryPage() {
                   <TableCell>
                     <Tooltip text={job.display_name}>
                       <Link
-                        to={`/jobs/${job.id}`}
+                        to={jobDetailUrl(job.id)}
                         className="block truncate font-medium hover:text-primary focus-visible:underline"
                       >
                         {job.display_name}
@@ -341,7 +342,7 @@ export function HistoryPage() {
                         variant="ghost"
                         size="sm"
                       >
-                        <Link to={`/jobs/${job.id}`}>
+                        <Link to={jobDetailUrl(job.id)}>
                           详情
                           <ArrowRight
                             aria-hidden="true"

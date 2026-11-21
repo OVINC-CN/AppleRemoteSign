@@ -145,7 +145,7 @@ it.each([
       await screen.findByRole('link', {
         name: '查看已创建任务',
       }),
-    ).toHaveAttribute('href', '/jobs/saved-job');
+    ).toHaveAttribute('href', '/jobs/detail?job_id=saved-job');
     expect(upload).toHaveBeenCalledTimes(1);
   },
 );
