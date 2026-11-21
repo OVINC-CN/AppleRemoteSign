@@ -19,6 +19,9 @@ func TestYAMLContract(t *testing.T) {
 		{"login_ttl: \"10m\"", "login_ttl: 11m"},
 		{"max_upload_bytes: 2147483648", "max_upload_bytes: -1"},
 		{"allowed_origins: []", "allowed_origins: [\"https://site.example/a\"]"},
+		{`bucket_url: "https://signing-artifacts-1250000000.cos.ap-guangzhou.myqcloud.com"`, `bucket_url: "https://cos.example/bucket"`},
+		{`secret_id: ""`, `secret_id: "without-secret-key"`},
+		{`session_token: ""`, `session_token: "without-secret-id"`},
 		{"report_enabled: false", "unknown: bogus"},
 		{"timeout: \"3s\"", "timeout: 0s"},
 	} {
