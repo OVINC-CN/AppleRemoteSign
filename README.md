@@ -15,11 +15,11 @@ Apple Sign 将签名凭据集中在服务端，通过网页工作台和 HTTP API
 - **签名与公证**：使用 rcodesign 完成代码签名、提交 Apple 公证和 Staple，交付可分发的 ZIP 制品。
 - **团队工作台**：OIDC 登录、应用授权、任务历史、任务重命名，以及公证详情和文件签名拓扑。
 - **CI 接入**：应用级 OpenAPI Key，配套 macOS 脚本完成打包、上传、查询、下载和解压。
-- **制品分发**：S3 或兼容对象存储承载制品，下载前检查文件是否存在，缺失时自动补传，通过 EdgeOne 方式 A 鉴权链接分发。
+- **制品分发**：腾讯云 COS 承载制品，下载前检查文件是否存在，缺失时自动补传，通过 EdgeOne 方式 A 鉴权链接分发。
 - **并发协调**：Redis 协调多实例操作，同一应用内按文件内容与原始文件名复用任务。
 - **运行观测**：JSON 日志、OpenTelemetry 追踪，以及可选的企业微信群机器人通知。
 
-上传请求完成签名并提交 Apple，后续状态查询推动公证检查、Staple 和 S3 上传。最终文件上传成功后，任务进入 `completed` 状态；工作台和客户端脚本负责发起后续查询。
+上传请求完成签名并提交 Apple，后续状态查询推动公证检查、Staple 和 COS 上传。最终文件上传成功后，任务进入 `completed` 状态；工作台和客户端脚本负责发起后续查询。
 
 ## 快速开始
 
@@ -32,7 +32,7 @@ Apple Sign 将签名凭据集中在服务端，通过网页工作台和 HTTP API
 | 任务协调 | 支持逻辑 DB 和 Lua 脚本的 Redis |
 | Apple 凭据 | Developer ID 签名证书及私钥、证书密码、App Store Connect API 凭据 |
 | 用户登录 | 支持 Authorization Code 与 PKCE S256 的 confidential OIDC client |
-| 制品存储 | S3 或兼容存储桶，以及映射到桶根目录的 EdgeOne 方式 A 鉴权 CDN |
+| 制品存储 | 腾讯云 COS 存储桶，以及映射到桶根目录的 EdgeOne 方式 A 鉴权 CDN |
 | 网页构建 | Node.js 24；静态站点托管或反向代理 |
 
 ### 2. 获取源码并配置
@@ -44,7 +44,7 @@ cp src/api/config.yaml config.yaml
 mkdir -p data secrets
 ```
 
-编辑 `config.yaml`，填写数据库、Redis、OIDC、S3 和 CDN 配置。签名凭据放在 `secrets/` 目录。
+编辑 `config.yaml`，填写数据库、Redis、OIDC、COS 和 CDN 配置。签名凭据放在 `secrets/` 目录。
 
 | 文件名 | 内容 |
 | --- | --- |
@@ -162,18 +162,22 @@ HTTP 客户端使用应用 Key 作为 Bearer 凭据。通过 `POST /openapi/v1/j
 | 签名与公证 | `signing.apple_key_file`、`signing.certificate_file`、`signing.password_file` |
 | 登录与权限 | `oidc.issuer_url`、`oidc.client_id`、`oidc.client_secret`、`oidc.redirect_uri`、`oidc.admin_usernames`、`oidc.allowed_usernames` |
 | 网页会话 | `web.frontend_url`、`web.allowed_origins`、`web.cookie_secure`、`web.cookie_same_site` |
-| 制品存储 | `s3.bucket`、`s3.region`、`s3.endpoint_url`、`s3.prefix` |
+| 制品存储 | `cos.bucket_url`、`cos.prefix`、`cos.secret_id`、`cos.secret_key`、`cos.session_token` |
 | CDN 鉴权 | `cdn.base_url`、`cdn.sign_key`、`cdn.sign_param` |
 | 可选集成 | `wecom.webhook_url`、`trace.endpoint` |
 
-OIDC 用户名采用精确匹配；普通用户需要同时获得登录白名单和应用授权。Key 绑定单个应用，完整令牌只展示一次，可在工作台吊销。S3 支持显式 AWS 凭据和 SDK 标准凭证链；CDN 的鉴权密钥、参数名和有效期由服务端与 CDN 规则配合配置。
+OIDC 用户名采用精确匹配。普通用户需要同时获得登录白名单和应用授权。Key 绑定单个应用，完整令牌只展示一次，可在工作台吊销。CDN 的鉴权密钥、参数名和有效期由服务端与 CDN 规则配合配置。
+
+`cos.bucket_url` 填写存储桶访问域名，例如 `https://signing-artifacts-1250000000.cos.ap-guangzhou.myqcloud.com`。`cos.secret_id` 和 `cos.secret_key` 填写腾讯云凭据，使用临时凭据时还需填写 `cos.session_token`。
+
+升级时将原有的 `s3` 配置段替换为 `cos`，沿用原有制品前缀和已有任务的对象键。如果同时更换存储桶，将制品按原对象键迁入 COS，并将 EdgeOne 回源切换到新桶。
 
 ## 运行与维护
 
 - **探测**：`GET /health` 用于存活检查；`GET /ready` 检查初始化、MySQL 和 Redis 的就绪状态。
 - **日志**：标准输出采用 JSON，使用响应头 `X-Trace-ID` 与日志中的 `trace_id` 关联请求；通过 `docker logs signer` 查看原始日志。
 - **追踪与通知**：配置 OTLP/gRPC 接收地址后上报追踪；配置企业微信群机器人 Webhook 后发送提交、成功和失败通知。
-- **持久化**：保留 MySQL、`data/` 和 S3 制品的备份；多副本共用同一数据库、Redis 逻辑 DB 和 ReadWriteMany 数据卷。
+- **持久化**：保留 MySQL、`data/` 和 COS 制品的备份；多副本共用同一数据库、Redis 逻辑 DB 和 ReadWriteMany 数据卷。
 - **镜像发布**：PR 触发镜像构建验证。推送 Git tag（`latest` 除外）时发布 `ghcr.io/ovinc-cn/applesign:<Git tag>`，CI 镜像平台为 `linux/amd64`，镜像标签保留原始 Git tag。
 
 ## 开发

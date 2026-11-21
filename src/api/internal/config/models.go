@@ -51,7 +51,7 @@ type config struct {
 	OIDC    oidcConfig    `yaml:"oidc"`
 	Web     webConfig     `yaml:"web"`
 	Signing signingConfig `yaml:"signing"`
-	S3      s3Config      `yaml:"s3"`
+	COS     cosConfig     `yaml:"cos"`
 	CDN     cdnConfig     `yaml:"cdn"`
 	Wecom   wecomConfig   `yaml:"wecom"`
 }
@@ -101,17 +101,14 @@ type signingConfig struct {
 	MaxArchiveEntries int           `yaml:"max_archive_entries"`
 }
 
-type s3Config struct {
-	Bucket          string        `yaml:"bucket"`
-	Prefix          string        `yaml:"prefix"`
-	EndpointURL     string        `yaml:"endpoint_url"`
-	Region          string        `yaml:"region"`
-	AddressingStyle string        `yaml:"addressing_style"`
-	ConnectTimeout  time.Duration `yaml:"connect_timeout"`
-	ReadTimeout     time.Duration `yaml:"read_timeout"`
-	AccessKeyID     string        `yaml:"access_key_id"`
-	SecretAccessKey string        `yaml:"secret_access_key"`
-	SessionToken    string        `yaml:"session_token"`
+type cosConfig struct {
+	BucketURL      string        `yaml:"bucket_url"`
+	Prefix         string        `yaml:"prefix"`
+	ConnectTimeout time.Duration `yaml:"connect_timeout"`
+	ReadTimeout    time.Duration `yaml:"read_timeout"`
+	SecretID       string        `yaml:"secret_id"`
+	SecretKey      string        `yaml:"secret_key"`
+	SessionToken   string        `yaml:"session_token"`
 }
 
 type cdnConfig struct {

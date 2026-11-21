@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"hash/crc64"
 	"io"
 	"math/big"
 	"net/http"
@@ -198,10 +199,10 @@ func (f *fixtureProvider) RoundTrip(r *http.Request) (*http.Response, error) {
 		}
 		_ = json.NewEncoder(rec).
 			Encode(echo.Map{"jobId": path.Base(r.URL.Path), "status": "Accepted", "archiveFilename": "Demo.zip", "uploadDate": "2024-01-01", "logFormatVersion": 1, "statusCode": 0, "statusSummary": "Accepted", "sha256": "abc", "ticketContents": []any{}})
-	case "s3.example":
+	case "cos.example":
 		f.mu.Lock()
 		defer f.mu.Unlock()
-		key := strings.TrimPrefix(r.URL.Path, "/browser-artifacts/")
+		key := strings.TrimPrefix(r.URL.Path, "/")
 		switch r.Method {
 		case "PUT":
 			if f.uploadFailure {
@@ -212,13 +213,15 @@ func (f *fixtureProvider) RoundTrip(r *http.Request) (*http.Response, error) {
 			if e != nil {
 				return nil, e
 			}
+			sum := crc64.Checksum(b, crc64.MakeTable(crc64.ECMA))
+			rec.Header().Set("X-Cos-Hash-Crc64ecma", strconv.FormatUint(sum, 10))
 			f.objects[key] = b
 		case "HEAD":
 			if _, ok := f.objects[key]; !ok {
 				rec.WriteHeader(404)
 			}
 		default:
-			return nil, fmt.Errorf("unexpected S3 method")
+			return nil, fmt.Errorf("unexpected COS method")
 		}
 	default:
 		return nil, fmt.Errorf("unexpected fixture host %s", r.URL.Hostname())

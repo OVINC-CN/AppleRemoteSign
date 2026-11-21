@@ -74,8 +74,8 @@ func (c *config) validate() error {
 		c.Signing.CommandTimeout,
 		c.Signing.StapleTimeout,
 		c.Signing.AppleTimeout,
-		c.S3.ConnectTimeout,
-		c.S3.ReadTimeout,
+		c.COS.ConnectTimeout,
+		c.COS.ReadTimeout,
 		c.Wecom.Timeout,
 	} {
 		if d <= 0 {
@@ -120,20 +120,21 @@ func (c *config) validate() error {
 		!filepath.IsAbs(c.Signing.DataDir) {
 		return errors.New("invalid storage settings")
 	}
-	if (c.S3.AccessKeyID == "") != (c.S3.SecretAccessKey == "") ||
-		!slices.Contains([]string{"auto", "virtual", "path"}, c.S3.AddressingStyle) ||
-		c.S3.Bucket == "" ||
-		c.S3.Region == "" {
-		return errors.New("invalid S3 settings")
+	if !endpoint(c.COS.BucketURL, true) {
+		return errors.New("invalid COS bucket URL")
 	}
-	c.S3.Prefix = strings.Trim(c.S3.Prefix, "/")
-	if c.S3.Prefix != "" {
-		for _, part := range strings.Split(c.S3.Prefix, "/") {
+	if (c.COS.SecretID == "") != (c.COS.SecretKey == "") ||
+		c.COS.SessionToken != "" && c.COS.SecretID == "" {
+		return errors.New("invalid COS credentials")
+	}
+	c.COS.Prefix = strings.Trim(c.COS.Prefix, "/")
+	if c.COS.Prefix != "" {
+		for _, part := range strings.Split(c.COS.Prefix, "/") {
 			if part == "." || part == ".." || strings.ContainsAny(part, "\\\r\n") {
-				return errors.New("invalid S3 prefix")
+				return errors.New("invalid COS prefix")
 			}
 		}
-		c.S3.Prefix += "/"
+		c.COS.Prefix += "/"
 	}
 	if !regexp.MustCompile("^[a-zA-Z0-9_-]{1,100}$").MatchString(c.CDN.SignParam) {
 		return errors.New("invalid CDN signing parameter")
@@ -141,14 +142,6 @@ func (c *config) validate() error {
 	for _, name := range append(slices.Clone(c.OIDC.AllowedUsernames), c.OIDC.AdminUsernames...) {
 		if name == "" || utf8.RuneCountInString(name) > 255 {
 			return errors.New("invalid OIDC username")
-		}
-	}
-	if c.S3.EndpointURL != "" {
-		u, e := url.Parse(c.S3.EndpointURL)
-		if e != nil || u.Hostname() == "" || u.User != nil || u.RawQuery != "" ||
-			u.Fragment != "" ||
-			!slices.Contains([]string{"http", "https"}, u.Scheme) {
-			return errors.New("invalid S3 endpoint URL")
 		}
 	}
 	if c.Wecom.WebhookURL != "" {

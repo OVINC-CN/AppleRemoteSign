@@ -22,7 +22,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"github.com/OVINC-CN/AppleSign/src/api/internal/apis/s3"
+	"github.com/OVINC-CN/AppleSign/src/api/internal/apis/cos"
 	"github.com/OVINC-CN/AppleSign/src/api/internal/apps/access/accessModels"
 	"github.com/OVINC-CN/AppleSign/src/api/internal/apps/access/accessSvc"
 	"github.com/OVINC-CN/AppleSign/src/api/internal/apps/auth/authModels"
@@ -65,11 +65,9 @@ func setup(t *testing.T) fixture {
 	cfg.Web.CookieSecure = false
 	cfg.CDN.BaseURL = browserHost
 	cfg.CDN.SignKey = "browser-cdn-key"
-	cfg.S3.Bucket = "browser-artifacts"
-	cfg.S3.EndpointURL = "https://s3.example"
-	cfg.S3.AddressingStyle = "path"
-	cfg.S3.AccessKeyID = "test-access"
-	cfg.S3.SecretAccessKey = "test-secret"
+	cfg.COS.BucketURL = "https://cos.example"
+	cfg.COS.SecretID = "test-access"
+	cfg.COS.SecretKey = "test-secret"
 	cfg.Signing.DataDir = filepath.Join(dir, "data")
 	cfg.Signing.WorkDir = dir
 	cfg.Signing.Binary = filepath.Join(dir, "rcodesign")
@@ -137,8 +135,8 @@ esac
 	engine := New()
 	provider.register(engine)
 	provider.handler = engine
-	s3.ResetFixture()
-	t.Cleanup(s3.ResetFixture)
+	cos.ResetFixture()
+	t.Cleanup(cos.ResetFixture)
 	old := http.DefaultTransport
 	http.DefaultTransport = provider
 	t.Cleanup(func() { http.DefaultTransport = old })

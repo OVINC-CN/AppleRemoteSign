@@ -67,16 +67,13 @@ signing:
   max_upload_bytes: 2147483648
   max_extracted_bytes: 4294967296
   max_archive_entries: 100000
-s3:
-  bucket: "signing-artifacts"
+cos:
+  bucket_url: "https://signing-artifacts-1250000000.cos.ap-guangzhou.myqcloud.com"
   prefix: "app-dist/"
-  endpoint_url: ""
-  region: "us-east-1"
-  addressing_style: "auto"
   connect_timeout: "10s"
   read_timeout: "60s"
-  access_key_id: ""
-  secret_access_key: ""
+  secret_id: ""
+  secret_key: ""
   session_token: ""
 cdn:
   base_url: "https://download.example.com"

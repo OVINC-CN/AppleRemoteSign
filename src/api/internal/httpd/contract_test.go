@@ -245,7 +245,7 @@ func TestSigningContract(t *testing.T) {
 	var j jobsModels.Job
 	must(t, s.Where("id=?", id).Take(&j).Error)
 	if j.ArtifactPath == nil || j.ArtifactS3Key != nil {
-		t.Fatal("unexpected cache after failed S3 delivery")
+		t.Fatal("unexpected cache after failed COS delivery")
 	}
 	f.provider.uploadFailure = false
 	status(t, call("GET", route), 200)

@@ -11,8 +11,8 @@ import (
 
 	"github.com/OVINC-CN/AppleSign/src/api/internal/apis/apple"
 	"github.com/OVINC-CN/AppleSign/src/api/internal/apis/cdn"
+	"github.com/OVINC-CN/AppleSign/src/api/internal/apis/cos"
 	"github.com/OVINC-CN/AppleSign/src/api/internal/apis/rcodesign"
-	"github.com/OVINC-CN/AppleSign/src/api/internal/apis/s3"
 	"github.com/OVINC-CN/AppleSign/src/api/internal/apps/auth/authModels"
 	"github.com/OVINC-CN/AppleSign/src/api/internal/apps/jobs/jobsModels"
 	"github.com/OVINC-CN/AppleSign/src/api/internal/config"
@@ -68,9 +68,6 @@ func deliver(ctx context.Context, j *jobsModels.Job, key string) (string, error)
 	if e != nil {
 		return "staple", e
 	}
-	if len(key) > 1024 {
-		return "upload", errors.New("S3 artifact key exceeds 1024 UTF-8 bytes.")
-	}
 	if e = db.Check(ctx); e != nil {
 		return "upload", e
 	}
@@ -79,7 +76,7 @@ func deliver(ctx context.Context, j *jobsModels.Job, key string) (string, error)
 		return "upload", e
 	}
 	defer func() { _ = f.Close() }()
-	return "upload", s3.Upload(ctx, f, key, j.Filename, *j.ArtifactSHA256)
+	return "upload", cos.Upload(ctx, f, key, j.Filename)
 }
 
 func Query(
@@ -114,7 +111,7 @@ func Query(
 				if e = save(ctx, j); e != nil {
 					return e
 				}
-				key := config.Config.S3.Prefix + path.Join(directory(j), j.Filename)
+				key := config.Config.COS.Prefix + path.Join(directory(j), j.Filename)
 				if j.ArtifactS3Key != nil {
 					key = *j.ArtifactS3Key
 				}
@@ -195,7 +192,7 @@ func Download(
 			return issue(500, "Artifact is unavailable; query this job to retry delivery.", j)
 		}
 		key := *j.ArtifactS3Key
-		ok, e := s3.Exists(ctx, key)
+		ok, e := cos.Exists(ctx, key)
 		if e == nil && !ok {
 			_, e = deliver(ctx, j, key)
 		}

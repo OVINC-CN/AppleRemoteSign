@@ -28,9 +28,9 @@ func init() {
 		c.Redis.URL,
 		c.OIDC.ClientSecret,
 		c.CDN.SignKey,
-		c.S3.SecretAccessKey,
-		c.S3.AccessKeyID,
-		c.S3.SessionToken,
+		c.COS.SecretID,
+		c.COS.SecretKey,
+		c.COS.SessionToken,
 		c.Wecom.WebhookURL,
 	)
 	if d, e := mysql.ParseDSN(c.MySQL.DSN); e == nil {
